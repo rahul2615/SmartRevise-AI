@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- Hero Section -->
+<!-- Hero Section -->
+<section class="hero-centered fade-in" style="padding: 40px 0;">
+    <div class="container">
+        <!-- Illustration & Text Layout -->
+        <div class="row align-items-center justify-content-center">
+            <!-- Left Illustration (Icon Composition) -->
+            <div class="col-lg-3 d-none d-lg-block text-center">
+                <div class="p-4" style="opacity: 0.9;">
+                    <i class="fas fa-book-reader text-primary" style="font-size: 8rem;"></i>
+                </div>
+            </div>
+
+            <!-- Central Content (Text) -->
+            <div class="col-lg-6 text-center">
+                <h1 class="hero-title mb-2" style="color: #1E3A8A; font-size: 2.5rem;">Welcome to Intelligent Learning
+                    Platform</h1>
+                <p class="hero-subtitle fst-italic text-primary fw-bold mb-4" style="font-size: 1.25rem;">Revise.
+                    Practice. Succeed.</p>
+            </div>
+
+            <!-- Right Illustration (Icon Composition) -->
+            <div class="col-lg-3 d-none d-lg-block text-center">
+                <div class="p-4" style="opacity: 0.9;">
+                    <i class="fas fa-laptop-code text-success" style="font-size: 8rem;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Feature Cards Section (Row 1) -->
+<section id="features" class="container py-5 fade-in delay-1" style="position: relative; z-index: 10;">
+    <div class="row g-4 justify-content-center">
+        <!-- Daily Revision Notes -->
+        <div class="col-md-4">
+            <div class="clean-card">
+                <i class="fas fa-clipboard-list text-primary fa-3x"></i>
+                <div class="clean-card-content">
+                    <h5>Daily Revision Notes</h5>
+                    <p>Generate concise revision notes for quick learning.</p>
+                </div>
+            </div>
+        </div>
+        <!-- MCQ Practice -->
+        <div class="col-md-4">
+            <div class="clean-card">
+                <div class="d-flex align-items-center justify-content-center rounded bg-success bg-opacity-10"
+                    style="width: 50px; height: 50px;">
+                    <i class="fas fa-question text-success fa-2x"></i>
+                </div>
+                <div class="clean-card-content">
+                    <h5>MCQ Practice</h5>
+                    <p>Test your knowledge with multiple choice questions.</p>
+                </div>
+            </div>
+        </div>
+        <!-- Coding Challenges -->
+        <div class="col-md-4">
+            <div class="clean-card">
+                <div class="d-flex align-items-center justify-content-center rounded bg-dark"
+                    style="width: 50px; height: 50px;">
+                    <i class="fas fa-code text-white fa-lg"></i>
+                </div>
+                <div class="clean-card-content">
+                    <h5>Coding Challenges</h5>
+                    <p>Improve your coding skills with practice problems.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- "What We Offer" Section (Row 2) -->
+<section class="offer-section fade-in delay-2">
+    <div class="container">
+        <h3 class="text-center fw-bold mb-2 ps-3 pe-3" style="color: #1E3A8A;">What We Offer</h3>
+        <div class="text-center mb-5">
+            <span class="text-primary fst-italic">Enhance your learning experience with smart and personalized study
+                materials.</span>
+        </div>
+
+        <div class="row g-4 justify-content-center">
+            <div class="col-md-4">
+                <div class="offer-item">
+                    <i class="fas fa-cogs offer-icon text-secondary"></i>
+                    <span class="offer-text">AI Generated Notes</span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="offer-item">
+                    <i class="fas fa-tasks offer-icon text-success"></i>
+                    <span class="offer-text">MCQ Quizzes</span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="offer-item">
+                    <i class="fas fa-laptop-code offer-icon text-dark"></i>
+                    <span class="offer-text">Coding Exercises</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Footer CTA -->
+<section class="footer-cta-section fade-in delay-3">
+    <div class="container">
+        <h2 class="footer-cta-title">Start Your Learning Journey Today!</h2>
+        <a href="{{ url_for('register') }}" class="btn btn-success-green shadow-lg">Get Started</a>
+
+        <!-- Background Elements (Simulating the clouds/rocket/books from image with icons) -->
+        <div class="mt-5 d-none d-md-flex justify-content-between px-5 opacity-50"
+            style="position: absolute; bottom: 0; width: 100%; left: 0; z-index: -1;">
+            <span><i class="fas fa-cloud fa-3x text-white"></i></span>
+            <span class="mb-4"><i class="fas fa-book fa-3x text-danger"></i></span>
+            <span><i class="fas fa-rocket fa-4x text-danger transform-rotate-45"
+                    style="transform: rotate(-45deg);"></i></span>
+            <span class="mb-3"><i class="fas fa-lightbulb fa-3x text-warning"></i></span>
+        </div>
+    </div>
+</section>
+{% endblock %}

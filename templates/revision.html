@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% block title %}Revision Notes - SmartRevise AI{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header & Search -->
+    <div class="row align-items-center mb-4">
+        <div class="col-md-6">
+            <h2 class="fw-bold mb-1"><i class="fas fa-book-open me-2 text-primary"></i>Revision Notes</h2>
+            <p class="text-muted mb-0">Organize and review your study materials.</p>
+        </div>
+        <div class="col-md-6">
+            <form action="{{ url_for('revision') }}" method="GET" class="d-flex gap-2">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" name="q" class="form-control border-start-0 ps-0"
+                        placeholder="Search notes, tags..." value="{{ search_query }}">
+                </div>
+                {% if search_query %}
+                <a href="{{ url_for('revision') }}" class="btn btn-outline-secondary" title="Clear Search"><i
+                        class="fas fa-times"></i></a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Add New Note Card -->
+        <div class="col-lg-4">
+            <div class="glass-card p-4 sticky-top" style="top: 100px; z-index: 10;">
+                <h5 class="fw-bold mb-3"><i class="fas fa-plus-circle me-2 text-success"></i>Add New Note</h5>
+                <form method="POST" action="{{ url_for('revision') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Topic / Title</label>
+                        <input type="text" class="form-control" name="topic" placeholder="e.g., Project Milestone 1"
+                            required>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Phase</label>
+                            <select class="form-select text-secondary" name="phase">
+                                <option value="Phase 1">Phase 1</option>
+                                <option value="Phase 2">Phase 2</option>
+                                <option value="Phase 3">Phase 3</option>
+                                <option value="Review">Review</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Tags</label>
+                            <input type="text" class="form-control" name="tags" placeholder="plan, urgent">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Content</label>
+                        <textarea class="form-control" name="content" rows="6"
+                            placeholder="• Objective: ...&#10;• Tasks: ...&#10;• Deliverables: ..."
+                            style="resize: none;" required></textarea>
+                        <div class="form-text small">Use '•' or '-' for bullets. Text auto-formats.</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <button type="reset" class="btn btn-light btn-sm text-muted">Clear</button>
+                        <button type="submit" class="btn btn-primary px-4"><i class="fas fa-save me-2"></i>Save
+                            Note</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Notes Grid -->
+        <div class="col-lg-8">
+            {% if notes %}
+            <div class="row g-3">
+                {% for note in notes %}
+                <div class="col-12">
+                    <div
+                        class="card border-0 shadow-sm note-card hover-lift {{ 'border-start border-4 border-warning' if note.is_pinned else '' }}">
+                        <div class="card-body">
+                            <!-- Header -->
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <h5 class="fw-bold text-dark mb-0">{{ note.topic }}</h5>
+                                        {% if note.is_pinned %}
+                                        <i class="fas fa-thumbtack text-warning small" title="Pinned"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <span
+                                            class="badge {{ 'bg-info' if note.phase == 'Phase 1' else ('bg-primary' if note.phase == 'Phase 2' else 'bg-success') }} bg-opacity-10 text-dark small fw-normal border">
+                                            {{ note.phase }}
+                                        </span>
+                                        {% if note.tags %}
+                                        {% for tag in note.tags.split(',') %}
+                                        <span class="badge bg-light text-muted border fw-normal">{{ tag.strip()
+                                            }}</span>
+                                        {% endfor %}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-link text-muted p-0" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                        <li><button class="dropdown-item small" onclick="togglePin({{ note.id }})"><i
+                                                    class="fas fa-thumbtack me-2 text-warning"></i>{{ 'Unpin' if
+                                                note.is_pinned else 'Pin' }}</button></li>
+                                        <li><button class="dropdown-item small" data-bs-toggle="modal"
+                                                data-bs-target="#editModal{{ note.id }}"><i
+                                                    class="fas fa-edit me-2 text-primary"></i>Edit</button></li>
+                                        <li>
+                                            <hr class="dropdown-divider">
+                                        </li>
+                                        <li>
+                                            <form action="{{ url_for('delete_note', note_id=note.id) }}" method="POST"
+                                                onsubmit="return confirm('Delete this note?');">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button type="submit" class="dropdown-item small text-danger"><i
+                                                        class="fas fa-trash-alt me-2"></i>Delete</button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Content -->
+                            <div class="note-content mt-3 mb-3"
+                                style="max-height: 200px; overflow-y: auto; line-height: 1.7; font-size: 0.95rem; color: #374151;">
+                                {{ note.content | replace('\n', '<br>') | safe }}
+                            </div>
+
+                            <!-- Footer -->
+                            <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                <small class="text-muted" style="font-size: 0.8rem;">
+                                    <i class="far fa-clock me-1"></i>Updated {{ note.updated_at.strftime('%Y-%m-%d
+                                    %H:%M') }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Modal -->
+                <div class="modal fade" id="editModal{{ note.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content border-0 shadow">
+                            <div class="modal-header bg-light">
+                                <h5 class="modal-title fw-bold">Edit Note</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form action="{{ url_for('edit_note', note_id=note.id) }}" method="POST">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold">Topic</label>
+                                        <input type="text" class="form-control" name="topic" value="{{ note.topic }}"
+                                            required>
+                                    </div>
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-6">
+                                            <label class="form-label small fw-bold">Phase</label>
+                                            <select class="form-select" name="phase">
+                                                <option value="Phase 1" {{ 'selected' if note.phase=='Phase 1' }}>Phase
+                                                    1</option>
+                                                <option value="Phase 2" {{ 'selected' if note.phase=='Phase 2' }}>Phase
+                                                    2</option>
+                                                <option value="Phase 3" {{ 'selected' if note.phase=='Phase 3' }}>Phase
+                                                    3</option>
+                                                <option value="Review" {{ 'selected' if note.phase=='Review' }}>Review
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="form-label small fw-bold">Tags</label>
+                                            <input type="text" class="form-control" name="tags" value="{{ note.tags }}">
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold">Content</label>
+                                        <textarea class="form-control" name="content" rows="8"
+                                            required>{{ note.content }}</textarea>
+                                    </div>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <div class="bg-light rounded-circle d-inline-flex p-4 mb-3">
+                    <i class="fas fa-sticky-note fa-3x text-muted opacity-50"></i>
+                </div>
+                <h5>No notes found</h5>
+                <p class="text-muted">Create a new note to get started.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    async function togglePin(id) {
+        try {
+            const response = await fetch(`/note/${id}/pin`, { method: 'POST' });
+            const data = await response.json();
+            if (data.success) location.reload();
+        } catch (e) {
+            console.error('Error pinning note:', e);
+        }
+    }
+</script>
+{% endblock %}

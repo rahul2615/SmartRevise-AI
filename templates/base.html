@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SmartRevise AI{% endblock %}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=3">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html2pdf for Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        // Apply saved theme before render to prevent flash
+        (function(){const t=localStorage.getItem('sr-theme')||'light';document.documentElement.setAttribute('data-theme',t)})();
+    </script>
+    <!-- CSRF Token for AJAX requests -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="{{ url_for('home') }}">
+                <i class="fas fa-brain me-2"></i>SmartRevise
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto align-items-center">
+                    {% if current_user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="javascript:void(0)" role="button" data-bs-toggle="dropdown" aria-expanded="false">Study</a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('revision') }}"><i class="fas fa-sticky-note me-2 text-primary"></i>Revision Notes</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('mcq') }}"><i class="fas fa-question-circle me-2 text-warning"></i>Take Quiz</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('planner') }}"><i class="fas fa-calendar me-2 text-success"></i>Daily Planner</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('study_plan') }}"><i class="fas fa-road me-2 text-info"></i>Study Roadmap</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('analytics') }}"><i class="fas fa-chart-bar me-2 text-danger"></i>Analytics</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('coding') }}">Coding</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('chat') }}">AI Tutor</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('pdf_analyzer') }}"><i class="fas fa-file-pdf me-1"></i>PDF AI</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('study_groups') }}"><i class="fas fa-users me-1"></i>Groups</a>
+                    </li>
+                    {% if current_user.role == 'admin' %}
+                    <li class="nav-item">
+                        <a class="nav-link text-danger" href="{{ url_for('admin_panel') }}"><i class="fas fa-shield-alt me-1"></i>Admin</a>
+                    </li>
+                    {% endif %}
+                    <!-- Dark Mode Toggle -->
+                    <li class="nav-item">
+                        <button class="nav-link btn btn-sm p-1 px-2 ms-1 border-0" onclick="toggleDarkMode()" title="Toggle Dark/Light Mode" id="dark-mode-btn" style="background:none;cursor:pointer">
+                            <i class="fas fa-moon" id="theme-icon"></i>
+                        </button>
+                    </li>
+                    <!-- Notification Bell -->
+                    <li class="nav-item">
+                        <button class="nav-link btn btn-sm p-1 px-2 border-0" onclick="toggleNotifications()" title="Study Reminders" id="notif-btn" style="background:none;cursor:pointer">
+                            <i class="fas fa-bell" id="notif-icon"></i>
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-outline-danger btn-sm px-3 ms-2" href="{{ url_for('logout') }}">Logout</a>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('home') }}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#features">Features</a>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link btn btn-sm p-1 px-2 border-0" onclick="toggleDarkMode()" title="Toggle Dark/Light" style="background:none;cursor:pointer">
+                            <i class="fas fa-moon" id="theme-icon-guest"></i>
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('login') }}">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-primary btn-sm px-3 ms-2 text-white" href="{{ url_for('register') }}">Get Started</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="position-fixed top-0 end-0 p-3" style="z-index: 1050">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="toast align-items-center border-0 mb-2 shadow-lg show" role="alert" aria-live="assertive"
+            aria-atomic="true" data-type="{{ category }}">
+            <div class="d-flex">
+                <div class="toast-body d-flex align-items-center gap-2">
+                    {% if category == 'success' %}
+                    <i class="fas fa-check-circle text-success fs-5"></i>
+                    {% elif category == 'error' or category == 'danger' %}
+                    <i class="fas fa-exclamation-circle text-danger fs-5"></i>
+                    {% else %}
+                    <i class="fas fa-info-circle text-primary fs-5"></i>
+                    {% endif %}
+                    <span class="fw-medium">{{ message }}</span>
+                </div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Content Block -->
+    <div class="content-wrapper">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center py-4">
+        <div class="container">
+            <p class="mb-0">&copy; 2026 SmartRevise AI. All rights reserved.</p>
+            <small class="text-muted">Empowering Learning with Artificial Intelligence</small>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
+    <script>
+    // ========== 0. GLOBAL CSRF HELPER ==========
+    const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+    // Override global fetch to always include CSRF token for non-GET requests
+    const _originalFetch = window.fetch;
+    window.fetch = function(url, options = {}) {
+        if (options.method && options.method.toUpperCase() !== 'GET') {
+            options.headers = options.headers || {};
+            // Handle both Headers object and plain object
+            if (options.headers instanceof Headers) {
+                if (!options.headers.has('X-CSRFToken')) {
+                    options.headers.set('X-CSRFToken', CSRF_TOKEN);
+                }
+            } else {
+                if (!options.headers['X-CSRFToken']) {
+                    options.headers['X-CSRFToken'] = CSRF_TOKEN;
+                }
+            }
+        }
+        return _originalFetch.call(this, url, options);
+    };
+
+    // ========== 1. DARK MODE TOGGLE ==========
+    function toggleDarkMode(){
+        const html=document.documentElement;
+        const current=html.getAttribute('data-theme');
+        const next=current==='dark'?'light':'dark';
+        html.setAttribute('data-theme',next);
+        localStorage.setItem('sr-theme',next);
+        updateThemeIcon(next);
+    }
+    function updateThemeIcon(theme){
+        const icons=document.querySelectorAll('#theme-icon,#theme-icon-guest');
+        icons.forEach(i=>{if(i){i.className=theme==='dark'?'fas fa-sun text-warning':'fas fa-moon'}});
+    }
+    updateThemeIcon(document.documentElement.getAttribute('data-theme'));
+
+    // ========== 2. EXPORT TO PDF (global) ==========
+    window.exportToPDF=function(elementId,filename){
+        const el=document.getElementById(elementId);
+        if(!el){alert('Nothing to export');return}
+        const opt={margin:0.5,filename:(filename||'SmartRevise_Export')+'.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true},jsPDF:{unit:'in',format:'a4',orientation:'portrait'}};
+        html2pdf().set(opt).from(el).save();
+    };
+
+    // ========== 3. NOTIFICATION SYSTEM ==========
+    let notifEnabled=localStorage.getItem('sr-notif')==='true';
+    let notifInterval=null;
+    function updateNotifIcon(){
+        const icon=document.getElementById('notif-icon');
+        if(icon)icon.className=notifEnabled?'fas fa-bell text-warning':'fas fa-bell-slash text-muted';
+    }
+    function toggleNotifications(){
+        if(!notifEnabled){
+            if('Notification' in window){
+                Notification.requestPermission().then(p=>{
+                    if(p==='granted'){
+                        notifEnabled=true;localStorage.setItem('sr-notif','true');
+                        updateNotifIcon();startNotifTimer();
+                        new Notification('📚 SmartRevise AI',{body:'Study reminders enabled! You\'ll get a nudge every 30 minutes.',icon:'/static/img/favicon.png'});
+                    }else{alert('Please allow notifications in your browser settings.')}
+                });
+            }else{alert('Your browser doesn\'t support notifications.')}
+        }else{
+            notifEnabled=false;localStorage.setItem('sr-notif','false');
+            if(notifInterval)clearInterval(notifInterval);
+            updateNotifIcon();
+        }
+    }
+    function startNotifTimer(){
+        if(notifInterval)clearInterval(notifInterval);
+        const messages=['📖 Time for a study break! Review your notes.','🧠 Keep the streak going! Take a quick quiz.','💪 30 minutes passed — stay focused!','🔥 Your future self will thank you. Keep studying!','📝 Have you revised your weak topics today?'];
+        notifInterval=setInterval(()=>{
+            if(notifEnabled&&document.hidden){
+                const msg=messages[Math.floor(Math.random()*messages.length)];
+                new Notification('SmartRevise AI',{body:msg});
+            }
+        },30*60*1000); // Every 30 minutes
+    }
+    updateNotifIcon();
+    if(notifEnabled)startNotifTimer();
+
+    // ========== 4. KEYBOARD SHORTCUTS ==========
+    document.addEventListener('keydown',function(e){
+        // Ctrl+Enter → Run Code (coding page)
+        if(e.ctrlKey&&e.key==='Enter'){
+            e.preventDefault();
+            const runBtn=document.querySelector('[onclick="runCode()"]');
+            if(runBtn)runBtn.click();
+        }
+        // Ctrl+S → Save notes
+        if(e.ctrlKey&&e.key==='s'){
+            e.preventDefault();
+            const saveBtn=document.getElementById('save-notes-btn')||document.querySelector('[onclick*="saveNote"]')||document.querySelector('[onclick*="save"]');
+            if(saveBtn&&!saveBtn.disabled)saveBtn.click();
+            else console.log('Ctrl+S: No save action on this page');
+        }
+        // Ctrl+E → Export to PDF
+        if(e.ctrlKey&&e.key==='e'){
+            e.preventDefault();
+            const exportable=document.getElementById('summary-content')||document.getElementById('notes-content')||document.getElementById('gen-output');
+            if(exportable)exportToPDF(exportable.id,'SmartRevise_Export');
+        }
+    });
+    </script>
+
+    <!-- Heartbeat for Time Tracking -->
+    {% if current_user.is_authenticated %}
+    <script>
+        setInterval(() => {
+            fetch("{{ url_for('update_time') }}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': CSRF_TOKEN
+                }
+            })
+                .then(res => res.json())
+                .then(data => console.log('Time updated:', data.total))
+                .catch(err => console.error('Time update failed'));
+        }, 60000); // Every 60 seconds
+    </script>
+    {% endif %}
+
+</body>
+
+</html>

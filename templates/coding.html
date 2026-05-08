@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+
+{% block title %}Coding Practice - SmartRevise AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" style="height: calc(100vh - 80px);">
+    <div class="row h-100 g-4">
+        <!-- Editor Column -->
+        <div class="col-lg-7 h-100 d-flex flex-column">
+            <div class="glass-card h-100 overflow-hidden d-flex flex-column p-0 border-0">
+                <!-- Toolbar -->
+                <div class="card-header bg-transparent border-bottom p-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3">
+                        <select id="language-selector" class="form-select form-select-sm fw-bold border-0 bg-light" style="width: 150px; border-radius: 8px;">
+                            <option value="python">Python 3.10</option>
+                            <option value="javascript">Node.js</option>
+                            <option value="java">Java 15</option>
+                        </select>
+                        <select id="template-selector" class="form-select form-select-sm border-0 bg-light" style="width: 160px; border-radius: 8px;" onchange="loadTemplate()">
+                            <option value="" selected disabled>Snippets...</option>
+                            <option value="hello">Hello World</option>
+                            <option value="loop">For Loop</option>
+                            <option value="function">Function logic</option>
+                        </select>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-sm btn-light rounded-circle hover-scale" onclick="toggleTheme()" title="Toggle Theme" style="width: 35px; height: 35px;">
+                            <i class="fas fa-moon text-dark" id="theme-icon"></i>
+                        </button>
+                        <button class="btn btn-sm btn-light rounded-circle hover-scale text-danger" onclick="clearCode()" title="Clear" style="width: 35px; height: 35px;">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        <button class="btn btn-sm btn-primary fw-bold px-4 rounded-pill hover-scale shadow-sm" onclick="runCode()">
+                            <i class="fas fa-play me-2"></i> Run Code
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Monaco Editor Area -->
+                <div id="editor-container" class="flex-grow-1 w-100" style="min-height: 0;"></div>
+
+                <!-- Status Bar -->
+                <div class="card-footer bg-transparent border-top p-2 small text-muted d-flex justify-content-between align-items-center">
+                    <span id="auto-save-status" class="fw-bold"><i class="fas fa-check-circle text-success me-1"></i>Ready</span>
+                    <span>Powered by Monaco Editor</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Output Column -->
+        <div class="col-lg-5 h-100 d-flex flex-column">
+            <div class="glass-card h-100 overflow-hidden d-flex flex-column p-0 border-0">
+                <div class="card-header bg-transparent border-bottom p-0">
+                    <ul class="nav nav-tabs nav-fill card-header-tabs m-0 border-0" id="outputTabs" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active border-0 py-3 fw-bold text-dark" id="output-tab" data-bs-toggle="tab" data-bs-target="#output-pane" type="button">
+                                <i class="fas fa-terminal me-2 text-success"></i>Terminal
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link border-0 py-3 fw-bold text-dark" id="error-tab" data-bs-toggle="tab" data-bs-target="#error-pane" type="button">
+                                <i class="fas fa-bug me-2 text-danger"></i>Errors
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link border-0 py-3 fw-bold text-dark" id="explain-tab" data-bs-toggle="tab" data-bs-target="#explain-pane" type="button">
+                                <i class="fas fa-magic me-2 text-primary"></i>AI Hint
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="card-body p-0 position-relative flex-grow-1 overflow-hidden bg-dark text-white" style="border-radius: 0 0 16px 16px;">
+                    <div class="tab-content h-100" id="outputTabContent">
+                        <!-- Output Pane -->
+                        <div class="tab-pane fade show active h-100" id="output-pane" role="tabpanel">
+                            <pre id="output-console" class="p-4 m-0 font-monospace text-success h-100 overflow-auto" style="font-size: 0.95rem; line-height: 1.6;">> System Ready...</pre>
+                        </div>
+                        <!-- Error Pane -->
+                        <div class="tab-pane fade h-100" id="error-pane" role="tabpanel">
+                            <pre id="error-console" class="p-4 m-0 font-monospace text-danger h-100 overflow-auto" style="font-size: 0.95rem; line-height: 1.6;"></pre>
+                        </div>
+                        <!-- Explain Pane -->
+                        <div class="tab-pane fade h-100 bg-white text-dark" id="explain-pane" role="tabpanel">
+                            <div class="p-5 h-100 d-flex flex-column justify-content-center align-items-center text-center" id="explain-placeholder">
+                                <div class="icon-circle bg-blue-100 text-primary mb-4" style="width: 80px; height: 80px; font-size: 2.5rem;">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <h4 class="fw-bold">AI Code Analyzer</h4>
+                                <p class="text-muted mb-4">Stuck? Let the AI Tutor explain your code and find logical errors.</p>
+                                <button class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm hover-scale" onclick="explainCode()">
+                                    <i class="fas fa-search me-2"></i>Analyze My Code
+                                </button>
+                            </div>
+                            <div id="explain-content" class="p-4 h-100 overflow-auto d-none">
+                                <h5 class="fw-bold text-primary mb-3"><i class="fas fa-robot me-2"></i>AI Analysis</h5>
+                                <div id="ai-response" class="text-muted" style="white-space: pre-wrap; font-size: 1rem; line-height: 1.7;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Execution Stats -->
+                <div class="card-footer bg-transparent border-top p-3 small fw-bold d-flex justify-content-between align-items-center">
+                    <span class="text-muted">Status: <span id="run-status" class="badge bg-secondary rounded-pill">Idle</span></span>
+                    <div class="text-muted">
+                        <span class="me-3"><i class="far fa-clock me-1"></i><span id="exec-time">--</span></span>
+                        <span><i class="fas fa-memory me-1"></i><span id="exec-mem">--</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Monaco Editor Loader -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/vs/loader.min.js"></script>
+<script>
+    const outputConsole = document.getElementById('output-console');
+    const errorConsole = document.getElementById('error-console');
+    const langSelector = document.getElementById('language-selector');
+    const storageKey = 'smartRevise_lastCode';
+    let isDark = true;
+    let editorInstance = null;
+
+    // Initialize Monaco Editor
+    require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.38.0/min/vs' }});
+    require(['vs/editor/editor.main'], function() {
+        const savedCode = localStorage.getItem(storageKey) || 'print("Hello, SmartRevise AI!")';
+        
+        editorInstance = monaco.editor.create(document.getElementById('editor-container'), {
+            value: savedCode,
+            language: 'python',
+            theme: 'vs-dark',
+            automaticLayout: true,
+            fontSize: 14,
+            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+            minimap: { enabled: false },
+            padding: { top: 16 },
+            scrollBeyondLastLine: false,
+            smoothScrolling: true,
+            cursorBlinking: "smooth"
+        });
+
+        // Auto-save & language change listeners
+        editorInstance.onDidChangeModelContent(() => {
+            localStorage.setItem(storageKey, editorInstance.getValue());
+        });
+
+        langSelector.addEventListener('change', (e) => {
+            const lang = e.target.value;
+            monaco.editor.setModelLanguage(editorInstance.getModel(), lang);
+            loadTemplate('hello'); // Reset on language change
+        });
+
+        // Check for AI Tutor prefilled code
+        const prefillCode = sessionStorage.getItem('prefill_code');
+        const prefillLang = sessionStorage.getItem('prefill_lang');
+        if (prefillCode) {
+            editorInstance.setValue(prefillCode);
+            if (prefillLang) {
+                langSelector.value = prefillLang;
+                monaco.editor.setModelLanguage(editorInstance.getModel(), prefillLang);
+            }
+            sessionStorage.removeItem('prefill_code');
+            sessionStorage.removeItem('prefill_lang');
+            // Show a toast notification
+            document.getElementById('auto-save-status').innerHTML = '<i class="fas fa-robot text-primary me-1"></i><span class="text-primary">Code loaded from AI Tutor!</span>';
+            setTimeout(() => { document.getElementById('auto-save-status').innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>Ready'; }, 4000);
+        }
+    });
+
+    // --- Toolbar Actions ---
+    function toggleTheme() {
+        isDark = !isDark;
+        const icon = document.getElementById('theme-icon');
+        
+        if (isDark) {
+            monaco.editor.setTheme('vs-dark');
+            icon.className = 'fas fa-moon text-dark';
+        } else {
+            monaco.editor.setTheme('vs-light');
+            icon.className = 'fas fa-sun text-dark';
+        }
+    }
+
+    function clearCode() {
+        if (confirm("Clear all code?")) {
+            editorInstance.setValue('');
+        }
+    }
+
+    function loadTemplate(forcedType = null) {
+        const type = forcedType || document.getElementById('template-selector').value;
+        const lang = langSelector.value;
+        let code = "";
+
+        if (lang === 'python') {
+            if (type === 'hello') code = 'print("Hello, SmartRevise!")';
+            else if (type === 'loop') code = 'for i in range(5):\n    print(f"Iteration {i}")';
+            else if (type === 'function') code = 'def greet(name):\n    return f"Hello, {name}"\n\nprint(greet("Student"))';
+        } else if (lang === 'javascript') {
+            if (type === 'hello') code = 'console.log("Hello, SmartRevise!");';
+            else if (type === 'loop') code = 'for (let i = 0; i < 5; i++) {\n    console.log(`Iteration ${i}`);\n}';
+            else if (type === 'function') code = 'function greet(name) {\n    return `Hello, ${name}`;\n}\n\nconsole.log(greet("Student"));';
+        } else if (lang === 'java') {
+            code = 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello World");\n    }\n}';
+        }
+
+        if (code && editorInstance) {
+            editorInstance.setValue(code);
+            document.getElementById('template-selector').value = "";
+        }
+    }
+
+    // --- Execution Logic ---
+    async function runCode() {
+        const code = editorInstance.getValue();
+        const language = langSelector.value;
+        const runStatus = document.getElementById('run-status');
+
+        runStatus.innerText = 'Running...';
+        runStatus.className = 'badge bg-warning text-dark rounded-pill';
+        outputConsole.innerText = '> Executing sequence...';
+        errorConsole.innerText = '';
+
+        try {
+            const response = await fetch("{{ url_for('run_code') }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code, language })
+            });
+            const data = await response.json();
+
+            document.getElementById('exec-time').innerText = data.time;
+            
+            // Helper function to switch tabs
+            function switchTab(tabId, paneId) {
+                document.querySelectorAll('#outputTabs .nav-link').forEach(el => el.classList.remove('active'));
+                document.querySelectorAll('#outputTabContent .tab-pane').forEach(el => {
+                    el.classList.remove('show', 'active');
+                });
+                document.getElementById(tabId).classList.add('active');
+                document.getElementById(paneId).classList.add('show', 'active');
+            }
+
+            if (data.stderr) {
+                switchTab('error-tab', 'error-pane');
+                errorConsole.innerText = data.stderr;
+                runStatus.innerText = 'Failed';
+                runStatus.className = 'badge bg-danger rounded-pill';
+            } else {
+                switchTab('output-tab', 'output-pane');
+                outputConsole.innerText = data.stdout || '(Executed with no output)';
+                runStatus.innerText = 'Success';
+                runStatus.className = 'badge bg-success rounded-pill';
+            }
+
+        } catch (error) {
+            outputConsole.innerText = `> Network Error: ${error}`;
+            runStatus.innerText = 'Error';
+            runStatus.className = 'badge bg-danger rounded-pill';
+        }
+    }
+
+    // --- AI Explain Logic ---
+    async function explainCode() {
+        const code = editorInstance.getValue();
+        const language = langSelector.value;
+        const btn = document.querySelector('#explain-placeholder button');
+        const text = document.getElementById('ai-response');
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Analyzing...';
+
+        try {
+            const response = await fetch("{{ url_for('explain_code') }}", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ code, language })
+            });
+            const data = await response.json();
+
+            document.getElementById('explain-placeholder').classList.add('d-none');
+            document.getElementById('explain-content').classList.remove('d-none');
+            text.innerText = data.explanation;
+
+        } catch (error) {
+            alert("Could not fetch explanation.");
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-search me-2"></i>Analyze My Code';
+        }
+    }
+</script>
+{% endblock %}

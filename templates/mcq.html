@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}Quiz - SmartRevise AI{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1 font-outfit text-dark"><i class="fas fa-brain me-2 text-primary"></i>Knowledge Check</h2>
+            <p class="text-muted mb-0">Test your understanding of key concepts.</p>
+        </div>
+        <div class="text-end">
+            <div class="badge bg-light text-dark border p-2 mb-1 shadow-sm rounded-pill px-3">
+                <i class="fas fa-clock me-1 text-danger"></i> Time Left: <span id="timer" class="fw-bold">05:00</span>
+            </div>
+            <div class="small text-muted mt-1 fw-bold">Total Questions: {{ questions|length }}</div>
+        </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress mb-5 position-relative shadow-sm" style="height: 12px; border-radius: 10px; background: #e2e8f0;">
+        <div class="progress-bar bg-primary" role="progressbar" style="width: 0%; border-radius: 10px; background: linear-gradient(90deg, #6366f1, #8b5cf6);" id="quiz-progress"></div>
+    </div>
+
+    <!-- Generate Quiz Section -->
+    <div class="glass-card mb-5 overflow-hidden">
+        <div class="card-header bg-transparent py-4 cursor-pointer d-flex justify-content-between align-items-center" data-bs-toggle="collapse" data-bs-target="#generateQuiz" aria-expanded="false" style="border-bottom: 1px solid rgba(0,0,0,0.05);">
+            <h5 class="mb-0 text-dark fw-bold font-outfit"><i class="fas fa-magic text-primary me-2"></i>Generate AI Quiz</h5>
+            <i class="fas fa-chevron-down text-muted"></i>
+        </div>
+        <div class="collapse show" id="generateQuiz">
+            <div class="card-body p-4 bg-light bg-opacity-50">
+                <form method="POST" action="{{ url_for('mcq') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="generate">
+                    <div class="mb-3">
+                        <label for="source_text" class="form-label fw-bold text-dark small text-uppercase tracking-wider">Paste notes or text to generate questions from:</label>
+                        <textarea class="form-control border-0 shadow-sm font-inter" id="source_text" name="source_text" rows="4" placeholder="Enter text here..." style="border-radius: 12px; padding: 15px; resize: none;"></textarea>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-end">
+                        <div>
+                            <label class="form-label fw-bold text-dark small text-uppercase tracking-wider">Difficulty Level:</label>
+                            <select name="difficulty" class="form-select border-0 shadow-sm font-inter fw-bold" style="border-radius: 10px; padding: 10px 35px 10px 15px; width: 150px;">
+                                <option value="easy">Easy</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="hard">Hard</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm hover-scale"><i class="fas fa-bolt me-2"></i>Generate Questions</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('mcq') }}" id="quiz-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="submit">
+        <div class="row g-4 justify-content-center">
+            <div class="col-lg-8">
+                {% for q in questions %}
+                <div class="glass-card mb-4 question-card p-0 overflow-hidden" id="q-card-{{ q.id }}">
+                    <div class="card-header bg-transparent py-4 px-5 d-flex justify-content-between align-items-center" style="border-bottom: 1px dashed rgba(0,0,0,0.1);">
+                        <div>
+                            <span class="badge bg-{{ q.badge_color|default('primary') }} me-2 rounded-pill px-3 py-2 shadow-sm">{{ q.difficulty|default('Medium') }}</span>
+                            <span class="badge bg-light text-dark border rounded-pill px-3 py-2 shadow-sm"><i class="fas fa-tag me-1 text-muted"></i>{{ q.topic|default('General') }}</span>
+                        </div>
+                        <div class="icon-circle bg-light text-muted fw-bold shadow-sm" style="width: 35px; height: 35px;">{{ loop.index }}</div>
+                    </div>
+                    <div class="card-body p-5">
+                        <h4 class="fw-bold text-dark mb-4 font-outfit" style="line-height: 1.5;">{{ q.question }}</h4>
+
+                        <!-- Hidden fields for scoring -->
+                        <input type="hidden" name="ans_{{ q.id }}" value="{{ q.answer }}">
+                        <input type="hidden" name="txt_{{ q.id }}" value="{{ q.question }}">
+
+                        <div class="d-flex flex-column gap-3 mt-4">
+                            {% for option in q.options %}
+                            <label class="option-label position-relative p-4 rounded-3 border d-flex align-items-center cursor-pointer transition-all bg-white shadow-sm hover-scale">
+                                <input type="radio" name="q{{ q.id }}" value="{{ option }}" class="form-check-input me-3" style="width: 20px; height: 20px;" required onchange="updateProgress()">
+                                <span class="fw-bold text-dark font-inter fs-6">{{ option }}</span>
+                                <span class="check-icon position-absolute end-0 me-4 text-primary opacity-0 transition-all"><i class="fas fa-check-circle fs-4"></i></span>
+                            </label>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Hint Selection -->
+                        {% if q.hint %}
+                        <div class="mt-4">
+                            <button type="button" class="btn btn-sm btn-light text-warning fw-bold rounded-pill px-3 hover-scale" onclick="toggleHint('{{ q.id }}')">
+                                <i class="fas fa-lightbulb me-1"></i> Need a Hint?
+                            </button>
+                            <div id="hint-{{ q.id }}" class="alert bg-warning bg-opacity-10 text-warning mt-3 d-none p-3 small border-0 shadow-sm rounded-3">
+                                <i class="fas fa-info-circle me-2 text-warning fs-5 align-middle"></i> <span class="align-middle fw-medium text-dark">{{ q.hint }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Explanation -->
+                        {% if result %}
+                        <div class="alert bg-info bg-opacity-10 text-info mt-4 p-4 border-0 shadow-sm rounded-3">
+                            <h6 class="fw-bold text-primary mb-2"><i class="fas fa-graduation-cap me-2"></i>Explanation</h6>
+                            <p class="mb-0 text-dark font-inter" style="line-height: 1.6;">{{ q.explanation }}</p>
+                        </div>
+                        {% endif %}
+
+                        <div class="mt-4 text-end">
+                            <a href="#" class="text-muted small text-decoration-none hover-scale d-inline-block" onclick="clearSelection('q{{ q.id }}'); return false;">
+                                <i class="fas fa-times-circle me-1"></i>Clear Selection
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="text-center mt-5 mb-5 pb-5">
+            <button type="submit" class="btn btn-primary btn-lg px-5 py-3 rounded-pill shadow fw-bold hover-scale" id="submit-btn" disabled>
+                Submit Quiz & View Results <i class="fas fa-paper-plane ms-2"></i>
+            </button>
+            <p class="text-danger small mt-3 fw-bold d-none animation-fade-in" id="unanswered-warning"><i class="fas fa-exclamation-triangle me-1"></i>Please answer all questions before submitting.</p>
+        </div>
+    </form>
+</div>
+
+<!-- Results Modal -->
+{% if result %}
+<div class="modal fade" id="resultModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg p-2" style="border-radius: 24px;">
+            <div class="modal-body text-center p-5">
+                {% if result.percentage >= 80 %}
+                <div class="icon-circle bg-success bg-opacity-10 text-success mx-auto mb-4" style="width: 100px; height: 100px; font-size: 3rem;">
+                    <i class="fas fa-trophy"></i>
+                </div>
+                <h3 class="fw-bold text-dark font-outfit mb-2">Excellent Work!</h3>
+                {% elif result.percentage >= 50 %}
+                <div class="icon-circle bg-warning bg-opacity-10 text-warning mx-auto mb-4" style="width: 100px; height: 100px; font-size: 3rem;">
+                    <i class="fas fa-star-half-alt"></i>
+                </div>
+                <h3 class="fw-bold text-dark font-outfit mb-2">Good Job!</h3>
+                {% else %}
+                <div class="icon-circle bg-danger bg-opacity-10 text-danger mx-auto mb-4" style="width: 100px; height: 100px; font-size: 3rem;">
+                    <i class="fas fa-book-reader"></i>
+                </div>
+                <h3 class="fw-bold text-dark font-outfit mb-2">Needs Review</h3>
+                {% endif %}
+                
+                <p class="text-muted mb-4">You scored</p>
+                <div class="display-3 fw-bold text-primary mb-1">{{ result.percentage }}%</div>
+                <p class="text-muted small mb-4">{{ result.score }} out of {{ result.total }} correct</p>
+                
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-light rounded-pill py-3 fw-bold text-dark shadow-sm hover-scale" data-bs-dismiss="modal">Review Explanations</button>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary rounded-pill py-3 fw-bold shadow-sm hover-scale">Return to Dashboard</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+    .option-label {
+        transition: all 0.2s ease-in-out;
+    }
+    .option-label:hover {
+        background-color: var(--input-bg) !important;
+        border-color: #cbd5e1 !important;
+        transform: translateY(-2px);
+    }
+    .option-label.selected {
+        background-color: rgba(59, 130, 246, 0.1) !important;
+        border-color: rgba(59, 130, 246, 0.5) !important;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1) !important;
+    }
+    .option-label.selected .check-icon {
+        opacity: 1 !important;
+    }
+    .option-label.correct {
+        background-color: rgba(34, 197, 94, 0.1) !important;
+        border-color: rgba(34, 197, 94, 0.5) !important;
+    }
+    .option-label.correct .check-icon i {
+        color: #22c55e;
+    }
+    .option-label.correct .check-icon {
+        opacity: 1 !important;
+    }
+    .option-label.incorrect {
+        background-color: rgba(239, 68, 68, 0.1) !important;
+        border-color: rgba(239, 68, 68, 0.5) !important;
+    }
+    .option-label.incorrect .check-icon i {
+        color: #ef4444;
+        content: "\f057"; /* fa-times-circle */
+    }
+</style>
+
+<script>
+    const totalQuestions = {{ questions|length }};
+    const submitBtn = document.getElementById('submit-btn');
+    const warning = document.getElementById('unanswered-warning');
+    const progressBar = document.getElementById('quiz-progress');
+
+    // Timer Logic
+    let timeLeft = 300; // 5 minutes
+    const timerDisplay = document.getElementById('timer');
+    const timerInterval = setInterval(() => {
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            timerDisplay.innerText = "00:00";
+            if (!submitBtn.disabled) {
+                // Auto submit if time runs out and questions are answered
+                document.getElementById('quiz-form').submit();
+            }
+        } else {
+            timeLeft--;
+            const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const s = (timeLeft % 60).toString().padStart(2, '0');
+            timerDisplay.innerText = `${m}:${s}`;
+            if(timeLeft < 60) timerDisplay.classList.add('text-danger', 'animation-pulse');
+        }
+    }, 1000);
+
+    function updateProgress() {
+        // Handle styling
+        document.querySelectorAll('.option-label').forEach(lbl => {
+            const radio = lbl.querySelector('input[type="radio"]');
+            if (radio.checked) {
+                lbl.classList.add('selected');
+            } else {
+                lbl.classList.remove('selected');
+            }
+        });
+
+        // Handle progress bar
+        const answered = document.querySelectorAll('input[type="radio"]:checked').length;
+        const progress = (answered / totalQuestions) * 100;
+        progressBar.style.width = `${progress}%`;
+
+        if (answered === totalQuestions) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('btn-secondary');
+            submitBtn.classList.add('btn-primary');
+            warning.classList.add('d-none');
+        } else {
+            submitBtn.disabled = true;
+        }
+    }
+
+    function clearSelection(name) {
+        document.querySelectorAll(`input[name="${name}"]`).forEach(el => el.checked = false);
+        updateProgress();
+    }
+
+    function toggleHint(id) {
+        const hintEl = document.getElementById('hint-' + id);
+        if(hintEl.classList.contains('d-none')) {
+            hintEl.classList.remove('d-none');
+            hintEl.classList.add('animation-fade-in');
+        } else {
+            hintEl.classList.add('d-none');
+        }
+    }
+
+    // Submit Validation
+    document.getElementById('quiz-form').addEventListener('submit', function (e) {
+        const answered = document.querySelectorAll('input[type="radio"]:checked').length;
+        if (answered < totalQuestions) {
+            e.preventDefault();
+            warning.classList.remove('d-none');
+            // Scroll to first unanswered question
+            let found = false;
+            document.querySelectorAll('.question-card').forEach(card => {
+                if(!found && !card.querySelector('input[type="radio"]:checked')) {
+                    card.scrollIntoView({behavior: 'smooth', block: 'center'});
+                    card.classList.add('animation-pulse');
+                    setTimeout(() => card.classList.remove('animation-pulse'), 1000);
+                    found = true;
+                }
+            });
+        }
+    });
+
+    {% if result %}
+    // Show modal automatically
+    document.addEventListener("DOMContentLoaded", function () {
+        clearInterval(timerInterval); // stop timer on result
+        var resultModal = new bootstrap.Modal(document.getElementById('resultModal'));
+        resultModal.show();
+
+        // Color code correct/incorrect
+        const details = {{ result.details | default([]) | tojson | safe }};
+        details.forEach(d => {
+            const card = document.getElementById('q-card-' + d.id);
+            if(card) {
+                const labels = card.querySelectorAll('.option-label');
+                labels.forEach(lbl => {
+                    const input = lbl.querySelector('input');
+                    input.disabled = true; // Disable further clicks
+                    if(input.value === d.correct_answer) {
+                        lbl.classList.add('correct');
+                    } else if (input.value === d.user_answer && !d.is_correct) {
+                        lbl.classList.add('incorrect');
+                    }
+                });
+            }
+        });
+    });
+    {% endif %}
+</script>
+{% endblock %}

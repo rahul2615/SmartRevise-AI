@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: smartrevise-ai
+    env: python
+    buildCommand: "bash ./build.sh"
+    startCommand: "gunicorn -k eventlet -w 1 app:app"
+    plan: starter # Starter plan recommended due to ML model memory requirements
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smartrevise-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false # You will need to input this manually in the Render Dashboard
+
+databases:
+  - name: smartrevise-db
+    databaseName: smartrevise
+    user: smartrevise_user
+    plan: free

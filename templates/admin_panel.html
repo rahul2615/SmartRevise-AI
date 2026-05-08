@@ -1,0 +1,319 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Panel - SmartRevise AI{% endblock %}
+
+{% block content %}
+<div class="container py-5 mt-5">
+
+    <!-- Header -->
+    <div class="d-flex align-items-center justify-content-between mb-4 fade-in">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="fas fa-shield-alt me-2 text-danger"></i>Admin Panel</h2>
+            <p class="text-muted mb-0">Manage users, roles, and platform settings</p>
+        </div>
+        <span class="badge bg-danger px-3 py-2 fs-6"><i class="fas fa-crown me-1"></i> Admin</span>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4 fade-in">
+        <div class="col-6 col-md-4">
+            <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid var(--bs-primary) !important">
+                <div class="card-body text-center">
+                    <div class="fs-2 fw-bold text-primary">{{ stats.total_users }}</div>
+                    <small class="text-muted">Total Users</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid var(--bs-success) !important">
+                <div class="card-body text-center">
+                    <div class="fs-2 fw-bold text-success">{{ stats.students }}</div>
+                    <small class="text-muted">Students</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-4">
+            <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid var(--bs-danger) !important">
+                <div class="card-body text-center">
+                    <div class="fs-2 fw-bold text-danger">{{ stats.admins }}</div>
+                    <small class="text-muted">Admins</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Platform Stats Row -->
+    <div class="row g-3 mb-4 fade-in">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px;background:rgba(var(--bs-primary-rgb),0.1)">
+                        <i class="fas fa-sticky-note text-primary"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold">{{ stats.total_notes }}</div>
+                        <small class="text-muted">Notes</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px;background:rgba(var(--bs-warning-rgb),0.1)">
+                        <i class="fas fa-question-circle text-warning"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold">{{ stats.total_quizzes }}</div>
+                        <small class="text-muted">Quizzes</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px;background:rgba(var(--bs-danger-rgb),0.1)">
+                        <i class="fas fa-file-pdf text-danger"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold">{{ stats.total_pdfs }}</div>
+                        <small class="text-muted">PDFs</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px;background:rgba(var(--bs-success-rgb),0.1)">
+                        <i class="fas fa-users text-success"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold">{{ stats.total_groups }}</div>
+                        <small class="text-muted">Groups</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Management Table -->
+    <div class="card border-0 shadow-sm fade-in">
+        <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-3">
+            <h5 class="fw-bold mb-0"><i class="fas fa-users-cog me-2"></i>User Management</h5>
+            <div class="input-group" style="max-width: 280px">
+                <span class="input-group-text bg-transparent border-end-0"><i class="fas fa-search text-muted"></i></span>
+                <input type="text" class="form-control border-start-0" placeholder="Search users..." id="user-search" oninput="filterUsers()">
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="users-table">
+                    <thead>
+                        <tr class="text-muted small">
+                            <th class="ps-4">USER</th>
+                            <th>EMAIL</th>
+                            <th>ROLE</th>
+                            <th>JOINED</th>
+                            <th>LAST LOGIN</th>
+                            <th>STREAK</th>
+                            <th class="text-end pe-4">ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr data-user-id="{{ user.id }}" class="user-row">
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold"
+                                         style="width:36px;height:36px;font-size:14px;
+                                         background: {% if user.role == 'admin' %}linear-gradient(135deg,#ef4444,#f97316){% else %}linear-gradient(135deg,#10b981,#06b6d4){% endif %}">
+                                        {{ user.username[0]|upper }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold">{{ user.username }}</div>
+                                        <small class="text-muted">ID #{{ user.id }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><small>{{ user.email }}</small></td>
+                            <td>
+                                <select class="form-select form-select-sm" style="width:120px"
+                                        onchange="changeRole({{ user.id }}, this.value)"
+                                        id="role-select-{{ user.id }}"
+                                        {% if user.id == current_user.id %}disabled{% endif %}>
+                                    <option value="student" {% if user.role == 'student' %}selected{% endif %}>Student</option>
+                                    <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+                                </select>
+                            </td>
+                            <td><small class="text-muted">{{ user.created_at.strftime('%d %b %Y') if user.created_at else 'N/A' }}</small></td>
+                            <td>
+                                {% if user.last_login_at %}
+                                <small class="text-muted">{{ user.last_login_at.strftime('%d %b, %I:%M %p') }}</small>
+                                {% if user.last_login_ip %}
+                                <br><small class="text-muted" style="font-size:0.7rem">{{ user.last_login_ip }}</small>
+                                {% endif %}
+                                {% else %}
+                                <small class="text-muted">Never</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark">🔥 {{ user.current_streak or 0 }}</span>
+                            </td>
+                            <td class="text-end pe-4">
+                                {% if user.id != current_user.id %}
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-warning" onclick="resetPassword({{ user.id }})" title="Reset Password">
+                                        <i class="fas fa-key"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="deleteUser({{ user.id }}, '{{ user.username }}')" title="Delete User">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                {% else %}
+                                <span class="badge bg-secondary">You</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audit Log Section -->
+    <div class="card border-0 shadow-sm fade-in mt-4">
+        <div class="card-header bg-transparent d-flex align-items-center justify-content-between py-3">
+            <h5 class="fw-bold mb-0"><i class="fas fa-history me-2 text-info"></i>Admin Audit Log</h5>
+            <span class="badge bg-info bg-opacity-10 text-info px-3 py-2">Last 20 Actions</span>
+        </div>
+        <div class="card-body p-0">
+            {% if audit_logs %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr class="text-muted small">
+                            <th class="ps-4">ADMIN</th>
+                            <th>ACTION</th>
+                            <th>TARGET USER</th>
+                            <th>DETAILS</th>
+                            <th>IP</th>
+                            <th>TIME</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in audit_logs %}
+                        <tr>
+                            <td class="ps-4">
+                                <small class="fw-semibold">{{ log.admin.username if log.admin else 'Unknown' }}</small>
+                            </td>
+                            <td>
+                                {% if log.action == 'delete_user' %}
+                                <span class="badge bg-danger bg-opacity-10 text-danger">Delete User</span>
+                                {% elif log.action == 'role_change' %}
+                                <span class="badge bg-warning bg-opacity-10 text-warning">Role Change</span>
+                                {% elif log.action == 'reset_password' %}
+                                <span class="badge bg-info bg-opacity-10 text-info">Password Reset</span>
+                                {% else %}
+                                <span class="badge bg-secondary bg-opacity-10">{{ log.action }}</span>
+                                {% endif %}
+                            </td>
+                            <td><small>ID #{{ log.target_user_id or 'N/A' }}</small></td>
+                            <td><small class="text-muted">{{ log.details or '-' }}</small></td>
+                            <td><small class="text-muted" style="font-size:0.72rem">{{ log.ip_address or '-' }}</small></td>
+                            <td><small class="text-muted">{{ log.created_at.strftime('%d %b, %I:%M %p') if log.created_at else '-' }}</small></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-shield-alt text-muted opacity-25 fs-1 mb-2 d-block"></i>
+                <p class="text-muted small mb-0">No admin actions recorded yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+
+<script>
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+function filterUsers() {
+    const q = document.getElementById('user-search').value.toLowerCase();
+    document.querySelectorAll('.user-row').forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(q) ? '' : 'none';
+    });
+}
+
+function changeRole(userId, newRole) {
+    if (!confirm(`Change this user's role to "${newRole}"?`)) {
+        location.reload();
+        return;
+    }
+    fetch(`/admin/user/${userId}/role`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken},
+        body: JSON.stringify({role: newRole})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`Role updated to ${newRole}`, 'success');
+        } else {
+            showToast(data.error || 'Failed', 'danger');
+            location.reload();
+        }
+    })
+    .catch(() => { showToast('Network error', 'danger'); location.reload(); });
+}
+
+function resetPassword(userId) {
+    if (!confirm('Reset this user\'s password to "password123"?')) return;
+    fetch(`/admin/user/${userId}/reset`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken}
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) showToast(data.message, 'success');
+        else showToast(data.error || 'Failed', 'danger');
+    });
+}
+
+function deleteUser(userId, username) {
+    if (!confirm(`Permanently delete user "${username}" and ALL their data? This cannot be undone.`)) return;
+    fetch(`/admin/user/${userId}/delete`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken}
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            document.querySelector(`tr[data-user-id="${userId}"]`).remove();
+            showToast('User deleted', 'info');
+        } else {
+            showToast(data.error || 'Failed', 'danger');
+        }
+    });
+}
+
+function showToast(msg, type) {
+    const c = document.getElementById('toast-container');
+    const t = document.createElement('div');
+    t.className = `toast align-items-center border-0 mb-2 shadow-lg show`;
+    t.setAttribute('role', 'alert');
+    t.innerHTML = `<div class="d-flex"><div class="toast-body d-flex align-items-center gap-2">
+        <i class="fas ${type==='success'?'fa-check-circle text-success':type==='danger'?'fa-exclamation-circle text-danger':'fa-info-circle text-primary'} fs-5"></i>
+        <span class="fw-medium">${msg}</span></div>
+        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 4000);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,31 @@
+# === SmartRevise AI — Full Dependencies ===
+
+# --- Flask Core ---
+flask
+flask-sqlalchemy
+flask-login
+flask-bcrypt
+flask-migrate
+flask-limiter
+flask-socketio
+flask-wtf
+
+# --- Web & API ---
+requests
+google-generativeai
+
+# --- PDF Processing ---
+PyPDF2
+
+# --- ML / NLP (Traditional ML only — no deep learning) ---
+scikit-learn
+numpy
+spacy
+nltk
+networkx
+
+# --- Production Deployment ---
+gunicorn
+eventlet
+psycopg2-binary
+python-dotenv

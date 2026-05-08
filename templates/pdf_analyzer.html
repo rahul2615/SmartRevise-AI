@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+{% block title %}PDF Intelligence - SmartRevise AI{% endblock %}
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1 font-outfit text-dark"><i class="fas fa-brain me-2 text-primary"></i>PDF Intelligence Engine</h2>
+            <p class="text-muted mb-0">Upload a PDF and let ML analyze it — summaries, MCQs, notes, Q&A and more.</p>
+        </div>
+        <div id="pdf-status" class="badge bg-light text-dark border p-2 shadow-sm rounded-pill px-3 d-none">
+            <i class="fas fa-file-pdf me-1 text-danger"></i><span id="pdf-name">No PDF</span>
+            <span class="ms-2 text-muted"><span id="pdf-pages">0</span> pages · <span id="pdf-words">0</span> words</span>
+        </div>
+    </div>
+
+    <!-- Upload Section -->
+    <div class="glass-card mb-4 p-4" id="upload-section">
+        <div class="text-center py-5" id="drop-zone" ondrop="handleDrop(event)" ondragover="event.preventDefault()" ondragenter="this.classList.add('border-primary')" ondragleave="this.classList.remove('border-primary')" style="border: 2px dashed #cbd5e1; border-radius: 16px; cursor: pointer;" onclick="document.getElementById('pdf-input').click()">
+            <div class="icon-circle bg-light text-primary mx-auto mb-3 shadow-sm" style="width:80px;height:80px;font-size:2.5rem"><i class="fas fa-cloud-upload-alt"></i></div>
+            <h5 class="fw-bold font-outfit text-dark">Drop your PDF here or click to browse</h5>
+            <p class="text-muted small mb-0">Supports PDF files up to 50MB</p>
+            <input type="file" id="pdf-input" accept=".pdf" class="d-none" onchange="uploadPDF(this.files[0])">
+        </div>
+        <div id="upload-progress" class="d-none mt-3">
+            <div class="progress" style="height:8px;border-radius:10px"><div class="progress-bar bg-primary" id="upload-bar" style="width:0%;background:linear-gradient(90deg,#6366f1,#8b5cf6)"></div></div>
+            <p class="text-center text-muted small mt-2" id="upload-text">Processing PDF with ML models...</p>
+        </div>
+        {% if pdfs %}
+        <div class="mt-4">
+            <h6 class="fw-bold text-dark mb-3"><i class="fas fa-history me-2 text-muted"></i>Recent PDFs</h6>
+            <div class="d-flex gap-2 flex-wrap">
+                {% for pdf in pdfs %}
+                <button class="btn btn-light btn-sm rounded-pill shadow-sm hover-scale" onclick="loadPDF({{pdf.id}},'{{pdf.filename}}',{{pdf.num_pages}},{{pdf.word_count}})">
+                    <i class="fas fa-file-pdf text-danger me-1"></i>{{pdf.filename|truncate(25)}}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Feature Tabs -->
+    <div id="features-section" class="d-none">
+        <ul class="nav nav-pills mb-4 gap-2 flex-wrap" id="featureTabs">
+            <li class="nav-item"><button class="btn btn-light rounded-pill px-4 py-2 fw-bold shadow-sm active" data-tab="summary" onclick="switchTab('summary',this)"><i class="fas fa-align-left me-2"></i>Summary</button></li>
+            <li class="nav-item"><button class="btn btn-light rounded-pill px-4 py-2 fw-bold shadow-sm" data-tab="keypoints" onclick="switchTab('keypoints',this)"><i class="fas fa-key me-2"></i>Key Points</button></li>
+            <li class="nav-item"><button class="btn btn-light rounded-pill px-4 py-2 fw-bold shadow-sm" data-tab="notes" onclick="switchTab('notes',this)"><i class="fas fa-sticky-note me-2"></i>Short Notes</button></li>
+            <li class="nav-item"><button class="btn btn-light rounded-pill px-4 py-2 fw-bold shadow-sm" data-tab="mcqs" onclick="switchTab('mcqs',this)"><i class="fas fa-question-circle me-2"></i>MCQs</button></li>
+            <li class="nav-item"><button class="btn btn-light rounded-pill px-4 py-2 fw-bold shadow-sm" data-tab="qa" onclick="switchTab('qa',this)"><i class="fas fa-comments me-2"></i>Ask PDF</button></li>
+        </ul>
+
+        <!-- Summary Tab -->
+        <div class="tab-pane-custom glass-card p-5" id="tab-summary">
+            <div class="text-center" id="summary-empty"><button class="btn btn-primary rounded-pill px-5 py-3 fw-bold shadow hover-scale" onclick="generateSummary()"><i class="fas fa-magic me-2"></i>Generate AI Summary</button><p class="text-muted small mt-3">Uses DistilBART deep learning model for abstractive summarization</p></div>
+            <div id="summary-loading" class="d-none text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="text-muted mt-3 fw-bold">ML Model processing...</p></div>
+            <div id="summary-result" class="d-none"><div class="d-flex justify-content-between align-items-center mb-4"><h5 class="fw-bold text-dark mb-0 font-outfit"><i class="fas fa-align-left text-primary me-2"></i>AI-Generated Summary</h5><button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="exportToPDF('summary-content','PDF_Summary')"><i class="fas fa-download me-1"></i>Export PDF</button></div><div id="summary-content"></div></div>
+        </div>
+
+        <!-- Key Points Tab -->
+        <div class="tab-pane-custom glass-card p-5 d-none" id="tab-keypoints">
+            <div class="text-center" id="kp-empty"><button class="btn btn-primary rounded-pill px-5 py-3 fw-bold shadow hover-scale" onclick="generateKeyPoints()"><i class="fas fa-key me-2"></i>Extract Key Points</button><p class="text-muted small mt-3">Uses SpaCy NER + TF-IDF + Sentence Embeddings</p></div>
+            <div id="kp-loading" class="d-none text-center py-5"><div class="spinner-border text-primary"></div><p class="text-muted mt-3 fw-bold">Extracting key points...</p></div>
+            <div id="kp-result" class="d-none"><div class="d-flex justify-content-between align-items-center mb-4"><h5 class="fw-bold text-dark mb-0 font-outfit"><i class="fas fa-key text-warning me-2"></i>Key Points</h5><button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="exportToPDF('kp-content','PDF_KeyPoints')"><i class="fas fa-download me-1"></i>Export PDF</button></div><div id="kp-content"></div></div>
+        </div>
+
+        <!-- Short Notes Tab -->
+        <div class="tab-pane-custom glass-card p-5 d-none" id="tab-notes">
+            <div class="text-center" id="notes-empty"><button class="btn btn-primary rounded-pill px-5 py-3 fw-bold shadow hover-scale" onclick="generateNotes()"><i class="fas fa-sticky-note me-2"></i>Generate Short Notes</button><p class="text-muted small mt-3">Extracts definitions, concepts, facts using NLP pipeline</p></div>
+            <div id="notes-loading" class="d-none text-center py-5"><div class="spinner-border text-primary"></div><p class="text-muted mt-3 fw-bold">Generating notes...</p></div>
+            <div id="notes-result" class="d-none"><div class="d-flex justify-content-between align-items-center mb-4"><h5 class="fw-bold text-dark mb-0 font-outfit"><i class="fas fa-sticky-note text-success me-2"></i>Short Notes</h5><button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="exportToPDF('notes-content','PDF_ShortNotes')"><i class="fas fa-download me-1"></i>Export PDF</button></div><div id="notes-content"></div></div>
+        </div>
+
+        <!-- MCQs Tab -->
+        <div class="tab-pane-custom glass-card p-5 d-none" id="tab-mcqs">
+            <div class="text-center" id="mcq-empty">
+                <div class="d-flex justify-content-center gap-3 mb-4 flex-wrap">
+                    <select id="mcq-difficulty" class="form-select border-0 shadow-sm fw-bold" style="border-radius:10px;width:150px"><option value="easy">Easy</option><option value="medium" selected>Medium</option><option value="hard">Hard</option></select>
+                    <select id="mcq-count" class="form-select border-0 shadow-sm fw-bold" style="border-radius:10px;width:180px"><option value="5">5 Questions</option><option value="10" selected>10 Questions</option><option value="15">15 Questions</option></select>
+                </div>
+                <button class="btn btn-primary rounded-pill px-5 py-3 fw-bold shadow hover-scale" onclick="generateMCQs()"><i class="fas fa-question-circle me-2"></i>Generate MCQs</button>
+                <p class="text-muted small mt-3">Uses SpaCy NER + WordNet for distractor generation</p>
+            </div>
+            <div id="mcq-loading" class="d-none text-center py-5"><div class="spinner-border text-primary"></div><p class="text-muted mt-3 fw-bold">Generating questions...</p></div>
+            <div id="mcq-result" class="d-none"><h5 class="fw-bold text-dark mb-4 font-outfit"><i class="fas fa-question-circle text-danger me-2"></i>Generated MCQs</h5><div id="mcq-content"></div><div class="text-center mt-4"><button class="btn btn-success rounded-pill px-5 py-2 fw-bold shadow-sm" onclick="checkMCQs()"><i class="fas fa-check me-2"></i>Check Answers</button></div></div>
+        </div>
+
+        <!-- Q&A Tab -->
+        <div class="tab-pane-custom glass-card p-5 d-none" id="tab-qa">
+            <h5 class="fw-bold text-dark mb-4 font-outfit"><i class="fas fa-comments text-primary me-2"></i>Ask Questions About Your PDF</h5>
+            <div id="qa-chat" style="max-height:400px;overflow-y:auto;margin-bottom:1rem"></div>
+            <div class="input-group shadow-sm" style="border-radius:15px;background: var(--bg-card);padding:5px">
+                <input type="text" id="qa-input" class="form-control border-0 font-inter" placeholder="Ask anything about the PDF..." style="box-shadow:none;padding:12px 15px" onkeydown="if(event.key==='Enter')askPDF()">
+                <button class="btn btn-primary rounded-circle hover-scale m-1 d-flex justify-content-center align-items-center" onclick="askPDF()" style="width:45px;height:45px"><i class="fas fa-paper-plane"></i></button>
+            </div>
+            <p class="text-muted small mt-2 text-center">Uses Sentence-Transformers RAG + Gemini API for answers</p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .tab-pane-custom{min-height:300px}
+    #featureTabs .active{background:linear-gradient(135deg,#6366f1,#8b5cf6)!important;color:#fff!important;border:none}
+    #featureTabs button:hover:not(.active){background:#e0e7ff!important;color:#4f46e5!important}
+    .note-card{background: var(--bg-card);border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin-bottom:12px;transition:all .2s}
+    .note-card:hover{transform:translateX(5px);border-left:3px solid #6366f1}
+    .mcq-card{background: var(--bg-card);border:1px solid #e2e8f0;border-radius:16px;padding:24px;margin-bottom:16px;transition:all .3s}
+    .mcq-option{background: var(--input-bg);border:2px solid #e2e8f0;border-radius:10px;padding:12px 16px;margin:6px 0;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:10px}
+    .mcq-option:hover{border-color:#6366f1;background:#eff6ff;transform:translateX(4px)}
+    .mcq-option.selected{border-color:#6366f1;background:#eff6ff;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+    .mcq-option.correct{border-color:#10b981!important;background:#ecfdf5!important}
+    .mcq-option.wrong{border-color:#ef4444!important;background:#fef2f2!important}
+    .qa-bubble{max-width:80%;padding:12px 16px;border-radius:16px;margin-bottom:12px;font-family:'Inter',sans-serif;font-size:.95rem;line-height:1.6}
+    .qa-user{background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border-radius:16px 16px 0 16px;margin-left:auto}
+    .qa-ai{background: var(--bg-card);border:1px solid #e2e8f0;border-radius:16px 16px 16px 0}
+    #drop-zone.border-primary{border-color:#6366f1!important;background:rgba(99,102,241,.03)}
+</style>
+
+<script>
+function handleDrop(e){e.preventDefault();e.currentTarget.classList.remove('border-primary');const f=e.dataTransfer.files[0];if(f&&f.name.endsWith('.pdf'))uploadPDF(f)}
+
+async function uploadPDF(file){
+    if(!file)return;
+    document.getElementById('upload-progress').classList.remove('d-none');
+    const bar=document.getElementById('upload-bar');
+    const txt=document.getElementById('upload-text');
+    bar.style.width='30%';txt.textContent='Extracting text from PDF...';
+    const fd=new FormData();fd.append('pdf_file',file);
+    try{
+        bar.style.width='60%';txt.textContent='Running ML models on extracted text...';
+        const res=await fetch('/api/pdf/upload',{method:'POST',body:fd});
+        const data=await res.json();
+        if(data.error){alert(data.error);document.getElementById('upload-progress').classList.add('d-none');return}
+        bar.style.width='100%';txt.textContent='PDF processed successfully!';
+        setTimeout(()=>activatePDF(data.filename,data.pages,data.word_count),500);
+    }catch(err){alert('Upload failed: '+err);document.getElementById('upload-progress').classList.add('d-none')}
+}
+
+async function loadPDF(id,name,pages,words){
+    try{const res=await fetch('/api/pdf/load/'+id,{method:'POST'});const data=await res.json();if(data.success)activatePDF(name,pages,words)}catch(e){alert('Failed to load PDF')}
+}
+
+function activatePDF(name,pages,words){
+    document.getElementById('pdf-status').classList.remove('d-none');
+    document.getElementById('pdf-name').textContent=name;
+    document.getElementById('pdf-pages').textContent=pages;
+    document.getElementById('pdf-words').textContent=words;
+    document.getElementById('features-section').classList.remove('d-none');
+    document.getElementById('upload-section').classList.add('d-none');
+    resetAllTabs();
+}
+
+function switchTab(tab,btn){
+    document.querySelectorAll('.tab-pane-custom').forEach(t=>t.classList.add('d-none'));
+    document.getElementById('tab-'+tab).classList.remove('d-none');
+    document.querySelectorAll('#featureTabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+}
+
+function resetAllTabs(){
+    ['summary','kp','notes','mcq'].forEach(p=>{
+        const e=document.getElementById(p+'-empty');if(e)e.classList.remove('d-none');
+        const r=document.getElementById(p+'-result');if(r)r.classList.add('d-none');
+        const l=document.getElementById(p+'-loading');if(l)l.classList.add('d-none');
+    });
+}
+
+async function generateSummary(){
+    showLoading('summary');
+    try{
+        const res=await fetch('/api/pdf/summarize',{method:'POST'});const data=await res.json();
+        if(data.error){alert(data.error);hideLoading('summary');return}
+        let html='';data.summary.forEach((s,i)=>{html+=`<div class="note-card fade-in" style="animation-delay:${i*0.1}s"><i class="fas fa-check-circle text-primary me-2"></i>${s}</div>`});
+        document.getElementById('summary-content').innerHTML=html;
+        document.getElementById('summary-loading').classList.add('d-none');
+        document.getElementById('summary-result').classList.remove('d-none');
+    }catch(e){alert('Error: '+e);hideLoading('summary')}
+}
+
+async function generateKeyPoints(){
+    showLoading('kp');
+    try{
+        const res=await fetch('/api/pdf/keypoints',{method:'POST'});const data=await res.json();
+        if(data.error){alert(data.error);hideLoading('kp');return}
+        let html='';data.keypoints.forEach((p,i)=>{html+=`<div class="note-card fade-in" style="animation-delay:${i*0.1}s"><span class="badge bg-warning text-dark me-2 rounded-pill">${i+1}</span>${p}</div>`});
+        document.getElementById('kp-content').innerHTML=html;
+        document.getElementById('kp-loading').classList.add('d-none');
+        document.getElementById('kp-result').classList.remove('d-none');
+    }catch(e){alert('Error: '+e);hideLoading('kp')}
+}
+
+async function generateNotes(){
+    showLoading('notes');
+    try{
+        const res=await fetch('/api/pdf/notes',{method:'POST'});const data=await res.json();
+        if(data.error){alert(data.error);hideLoading('notes');return}
+        const n=data.notes;let html='';
+        if(n.definitions&&n.definitions.length){html+=`<h6 class="fw-bold text-primary mt-3 mb-2"><i class="fas fa-book me-2"></i>Definitions</h6>`;n.definitions.forEach(d=>{html+=`<div class="note-card">${d}</div>`})}
+        if(n.concepts&&n.concepts.length){html+=`<h6 class="fw-bold text-purple mt-4 mb-2"><i class="fas fa-lightbulb me-2"></i>Key Concepts</h6>`;n.concepts.forEach(c=>{html+=`<div class="note-card">${c}</div>`})}
+        if(n.facts&&n.facts.length){html+=`<h6 class="fw-bold text-success mt-4 mb-2"><i class="fas fa-info-circle me-2"></i>Important Facts</h6>`;n.facts.forEach(f=>{html+=`<div class="note-card">${f}</div>`})}
+        if(n.important_terms&&n.important_terms.length){html+=`<h6 class="fw-bold text-danger mt-4 mb-2"><i class="fas fa-tags me-2"></i>Important Terms</h6><div class="d-flex flex-wrap gap-2">`;n.important_terms.forEach(t=>{html+=`<span class="badge bg-light text-dark border p-2 rounded-pill shadow-sm">${t}</span>`});html+='</div>'}
+        if(!html)html='<p class="text-muted">No structured notes could be extracted.</p>';
+        document.getElementById('notes-content').innerHTML=html;
+        document.getElementById('notes-loading').classList.add('d-none');
+        document.getElementById('notes-result').classList.remove('d-none');
+    }catch(e){alert('Error: '+e);hideLoading('notes')}
+}
+
+async function generateMCQs(){
+    showLoading('mcq');
+    const diff=document.getElementById('mcq-difficulty').value;
+    const num=document.getElementById('mcq-count').value;
+    try{
+        const res=await fetch('/api/pdf/mcqs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({difficulty:diff,num_questions:num})});
+        const data=await res.json();
+        if(data.error){alert(data.error);hideLoading('mcq');return}
+        let html='';data.mcqs.forEach((q,i)=>{
+            html+=`<div class="mcq-card fade-in" id="mcq-${q.id}" data-answer="${q.answer}">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="badge bg-${q.badge_color} rounded-pill px-3 py-2">${q.difficulty}</span>
+                    <span class="text-muted fw-bold small">Q${q.id}</span>
+                </div>
+                <h6 class="fw-bold text-dark mb-3">${q.question}</h6>
+                <div class="mcq-options">`;
+            q.options.forEach((o,j)=>{html+=`<div class="mcq-option" onclick="selectOption(this,'mcq-${q.id}')" data-value="${o}"><span class="fw-bold text-muted">${String.fromCharCode(65+j)}.</span><span>${o}</span></div>`});
+            html+=`</div><div class="explanation d-none mt-3 p-3 rounded-3" style="background:var(--input-bg)"><small class="text-primary fw-bold"><i class="fas fa-graduation-cap me-1"></i>${q.explanation}</small></div></div>`;
+        });
+        if(!data.mcqs.length)html='<p class="text-muted text-center">Could not generate MCQs. Try a different PDF with more content.</p>';
+        document.getElementById('mcq-content').innerHTML=html;
+        document.getElementById('mcq-loading').classList.add('d-none');
+        document.getElementById('mcq-result').classList.remove('d-none');
+    }catch(e){alert('Error: '+e);hideLoading('mcq')}
+}
+
+function selectOption(el,cardId){
+    document.querySelectorAll('#'+cardId+' .mcq-option').forEach(o=>o.classList.remove('selected'));
+    el.classList.add('selected');
+}
+
+function checkMCQs(){
+    let score=0,total=0;
+    document.querySelectorAll('.mcq-card').forEach(card=>{
+        const answer=card.dataset.answer;
+        const selected=card.querySelector('.mcq-option.selected');
+        total++;
+        card.querySelectorAll('.mcq-option').forEach(o=>{
+            if(o.dataset.value===answer)o.classList.add('correct');
+        });
+        if(selected){
+            if(selected.dataset.value===answer){score++;selected.classList.add('correct')}
+            else{selected.classList.add('wrong')}
+        }
+        card.querySelector('.explanation').classList.remove('d-none');
+    });
+    const pct=total?Math.round((score/total)*100):0;
+    const emoji=pct>=80?'🏆':pct>=50?'👍':'📚';
+    const el=document.createElement('div');
+    el.className='text-center glass-card p-4 mb-4 fade-in';
+    el.innerHTML=`<h3 class="fw-bold font-outfit">${emoji} Score: ${score}/${total} (${pct}%)</h3><p class="text-muted">Review explanations below</p>`;
+    document.getElementById('mcq-content').prepend(el);
+}
+
+async function askPDF(){
+    const input=document.getElementById('qa-input');
+    const q=input.value.trim();if(!q)return;input.value='';
+    const chat=document.getElementById('qa-chat');
+    chat.innerHTML+=`<div class="d-flex justify-content-end mb-3"><div class="qa-bubble qa-user">${q}</div></div>`;
+    chat.innerHTML+=`<div class="d-flex mb-3" id="qa-loading"><div class="qa-bubble qa-ai"><div class="d-flex gap-1"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div></div>`;
+    chat.scrollTop=chat.scrollHeight;
+    try{
+        const res=await fetch('/api/pdf/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
+        const data=await res.json();
+        document.getElementById('qa-loading').remove();
+        let ans=data.answer||data.error||'No answer found';
+        ans=ans.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>').replace(/`(.*?)`/g,'<code class="bg-light px-1 rounded">$1</code>');
+        chat.innerHTML+=`<div class="d-flex mb-3"><div class="qa-bubble qa-ai">${ans}</div></div>`;
+    }catch(e){
+        document.getElementById('qa-loading').remove();
+        chat.innerHTML+=`<div class="d-flex mb-3"><div class="qa-bubble qa-ai text-danger">Error connecting to server</div></div>`;
+    }
+    chat.scrollTop=chat.scrollHeight;
+}
+
+function showLoading(prefix){
+    document.getElementById(prefix+'-empty').classList.add('d-none');
+    document.getElementById(prefix+'-loading').classList.remove('d-none');
+    document.getElementById(prefix+'-result').classList.add('d-none');
+}
+function hideLoading(prefix){
+    document.getElementById(prefix+'-loading').classList.add('d-none');
+    document.getElementById(prefix+'-empty').classList.remove('d-none');
+}
+</script>
+{% endblock %}

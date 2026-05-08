@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - SmartRevise AI{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-page">
+
+    <!-- ═══════════════════════════════════════════════
+         HERO SECTION — Greeting + Micro Stats
+    ═══════════════════════════════════════════════ -->
+    <section class="dash-hero fade-in">
+        <div class="container">
+            <div class="dash-hero-inner">
+                <div class="dash-hero-left">
+                    <span class="dash-greeting-label"><i class="fas fa-sun"></i> Good to see you</span>
+                    <h1 class="dash-greeting">Welcome back, <span>{{ user.username }}</span></h1>
+                    <p class="dash-quote">"{{ motivation }}"</p>
+                </div>
+                <div class="dash-hero-right">
+                    <div class="dash-mini-stat">
+                        <div class="dash-mini-icon clock"><i class="far fa-clock"></i></div>
+                        <div>
+                            <span class="dash-mini-label">Study Time</span>
+                            <span class="dash-mini-value">{{ time_spent }}</span>
+                        </div>
+                    </div>
+                    <div class="dash-mini-stat streak">
+                        <div class="dash-mini-icon fire"><i class="fas fa-fire-flame-curved"></i></div>
+                        <div>
+                            <span class="dash-mini-label">Streak</span>
+                            <span class="dash-mini-value">{{ streak }} <small>days</small></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════
+         STATS RIBBON — 4 key numbers
+    ═══════════════════════════════════════════════ -->
+    <section class="container fade-in delay-1">
+        <div class="dash-stats-ribbon">
+            <a href="{{ url_for('revision') }}" class="dash-stat-pill" id="stat-notes">
+                <div class="dash-stat-icon blue"><i class="fas fa-book-open"></i></div>
+                <div class="dash-stat-info">
+                    <span class="dash-stat-number">{{ notes_count }}</span>
+                    <span class="dash-stat-label">Notes</span>
+                </div>
+            </a>
+            <a href="{{ url_for('analytics') }}" class="dash-stat-pill" id="stat-score">
+                <div class="dash-stat-icon {% if avg_score >= 80 %}green{% elif avg_score >= 50 %}amber{% else %}red{% endif %}"><i class="fas fa-bullseye"></i></div>
+                <div class="dash-stat-info">
+                    <span class="dash-stat-number">{{ avg_score }}%</span>
+                    <span class="dash-stat-label">Avg Score</span>
+                </div>
+            </a>
+            <div class="dash-stat-pill" id="stat-solved">
+                <div class="dash-stat-icon purple"><i class="fas fa-puzzle-piece"></i></div>
+                <div class="dash-stat-info">
+                    <span class="dash-stat-number">{{ problems_solved }}</span>
+                    <span class="dash-stat-label">Solved</span>
+                </div>
+            </div>
+            <div class="dash-stat-pill" id="stat-progress">
+                <div class="dash-stat-icon teal"><i class="fas fa-chart-line"></i></div>
+                <div class="dash-stat-info">
+                    <span class="dash-stat-number">{{ daily_progress }}%</span>
+                    <span class="dash-stat-label">Today</span>
+                </div>
+                <div class="dash-stat-bar">
+                    <div class="dash-stat-bar-fill" style="width: {{ daily_progress }}%"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════
+         MAIN GRID — AI Card + Quick Actions + Progress
+    ═══════════════════════════════════════════════ -->
+    <section class="container fade-in delay-2">
+        <div class="dash-main-grid">
+
+            <!-- AI Recommendation Card -->
+            <div class="dash-card dash-ai-card" id="ai-card">
+                <div class="dash-card-glow"></div>
+                <div class="dash-card-header">
+                    <div class="dash-card-badge"><i class="fas fa-robot"></i> AI Insight</div>
+                </div>
+                <div class="dash-card-body">
+                    <p class="dash-ai-text">{{ ai_rec }}</p>
+                    <a href="{{ url_for('planner') }}" class="dash-btn-glow">
+                        <span>Open Planner</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="dash-card" id="quick-actions-card">
+                <div class="dash-card-header">
+                    <div class="dash-card-badge"><i class="fas fa-bolt"></i> Quick Actions</div>
+                </div>
+                <div class="dash-card-body">
+                    <div class="dash-actions-grid">
+                        <a href="{{ url_for('revision') }}" class="dash-action" id="action-notes">
+                            <div class="dash-action-icon blue"><i class="fas fa-pen-fancy"></i></div>
+                            <span>Notes</span>
+                        </a>
+                        <a href="{{ url_for('mcq') }}" class="dash-action" id="action-quiz">
+                            <div class="dash-action-icon green"><i class="fas fa-clipboard-check"></i></div>
+                            <span>Quiz</span>
+                        </a>
+                        <a href="{{ url_for('coding') }}" class="dash-action" id="action-code">
+                            <div class="dash-action-icon purple"><i class="fas fa-code"></i></div>
+                            <span>Code</span>
+                        </a>
+                        <a href="{{ url_for('chat') }}" class="dash-action" id="action-tutor">
+                            <div class="dash-action-icon pink"><i class="fas fa-comments"></i></div>
+                            <span>AI Tutor</span>
+                        </a>
+                        <a href="{{ url_for('study_plan') }}" class="dash-action" id="action-plan">
+                            <div class="dash-action-icon amber"><i class="fas fa-map"></i></div>
+                            <span>Roadmap</span>
+                        </a>
+                        <a href="{{ url_for('pdf_analyzer') }}" class="dash-action" id="action-pdf">
+                            <div class="dash-action-icon red"><i class="fas fa-file-pdf"></i></div>
+                            <span>PDF AI</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Today's Progress -->
+            <div class="dash-card" id="progress-card">
+                <div class="dash-card-header">
+                    <div class="dash-card-badge"><i class="fas fa-calendar-day"></i> Today's Plan</div>
+                    <span class="dash-pct-badge {% if daily_progress >= 80 %}green{% elif daily_progress >= 40 %}amber{% else %}muted{% endif %}">{{ daily_progress }}%</span>
+                </div>
+                <div class="dash-card-body">
+                    <div class="dash-progress-ring-wrap">
+                        <svg class="dash-progress-ring" viewBox="0 0 120 120">
+                            <circle class="dash-ring-bg" cx="60" cy="60" r="52"></circle>
+                            <circle class="dash-ring-fill" cx="60" cy="60" r="52"
+                                style="stroke-dashoffset: {{ 327 - (327 * daily_progress / 100) }}"></circle>
+                        </svg>
+                        <div class="dash-ring-label">
+                            <span class="dash-ring-number">{{ daily_progress }}</span>
+                            <span class="dash-ring-unit">%</span>
+                        </div>
+                    </div>
+                    <p class="dash-progress-hint">
+                        {% if daily_progress == 0 %}
+                        <i class="fas fa-info-circle"></i> Start your daily tasks!
+                        {% elif daily_progress < 100 %}
+                        <i class="fas fa-arrow-trend-up"></i> Keep the momentum!
+                        {% else %}
+                        <i class="fas fa-party-horn"></i> All done — amazing!
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════
+         TOPIC MASTERY + ACTIVITY + WEAK TOPICS
+    ═══════════════════════════════════════════════ -->
+    <section class="container fade-in delay-3">
+        <div class="dash-bottom-grid">
+
+            <!-- Recent Activity -->
+            <div class="dash-card dash-activity-card" id="activity-card">
+                <div class="dash-card-header">
+                    <div class="dash-card-badge"><i class="fas fa-clock-rotate-left"></i> Recent Activity</div>
+                </div>
+                <div class="dash-card-body">
+                    {% if recent_activity %}
+                    <div class="dash-timeline">
+                        {% for activity in recent_activity %}
+                        <div class="dash-timeline-item">
+                            <div class="dash-timeline-dot {{ 'blue' if activity.type == 'note' else 'green' }}">
+                                <i class="fas {{ 'fa-file-lines' if activity.type == 'note' else 'fa-check' }}"></i>
+                            </div>
+                            <div class="dash-timeline-content">
+                                <p class="dash-timeline-text">{{ activity.text }}</p>
+                                <span class="dash-timeline-time"><i class="far fa-clock"></i> {{ activity.time }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="dash-empty-state">
+                        <div class="dash-empty-icon"><i class="fas fa-hourglass-start"></i></div>
+                        <h6>No activity yet</h6>
+                        <p>Start studying to see your progress here!</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Weak Topics / Needs Review -->
+            <div class="dash-card" id="weak-topics-card">
+                <div class="dash-card-header">
+                    <div class="dash-card-badge"><i class="fas fa-triangle-exclamation"></i> Needs Review</div>
+                </div>
+                <div class="dash-card-body">
+                    {% if weak_topics %}
+                    <div class="dash-weak-list">
+                        {% for item in weak_topics %}
+                        <div class="dash-weak-item">
+                            <div class="dash-weak-info">
+                                <span class="dash-weak-dot"></span>
+                                <span class="dash-weak-name">{{ item.topic }}</span>
+                            </div>
+                            <span class="dash-weak-score">{{ item.score }}%</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <a href="{{ url_for('mcq') }}" class="dash-btn-outline-danger">
+                        <i class="fas fa-crosshairs"></i> Practice Weak Areas
+                    </a>
+                    {% else %}
+                    <div class="dash-empty-state success">
+                        <div class="dash-empty-icon success"><i class="fas fa-circle-check"></i></div>
+                        <h6>All Clear!</h6>
+                        <p>No weak topics found. Keep it up!</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Topic Mastery -->
+            {% if topic_progress %}
+            <div class="dash-card dash-mastery-card" id="mastery-card">
+                <div class="dash-card-header">
+                    <div class="dash-card-badge"><i class="fas fa-layer-group"></i> Topic Mastery</div>
+                </div>
+                <div class="dash-card-body">
+                    <div class="dash-mastery-list">
+                        {% for tp in topic_progress %}
+                        <div class="dash-mastery-item">
+                            <div class="dash-mastery-top">
+                                <span class="dash-mastery-name">{{ tp.topic }}</span>
+                                <span class="dash-mastery-pct {% if tp.pct >= 80 %}green{% elif tp.pct >= 50 %}amber{% else %}red{% endif %}">{{ tp.pct }}%</span>
+                            </div>
+                            <div class="dash-mastery-bar">
+                                <div class="dash-mastery-fill {% if tp.pct >= 80 %}green{% elif tp.pct >= 50 %}amber{% else %}red{% endif %}" style="width: {{ tp.pct }}%"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </section>
+
+</div>
+{% endblock %}

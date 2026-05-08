@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - SmartRevise AI{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-box fade-in">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold">Welcome Back</h2>
+            <p class="text-muted">Login to continue learning</p>
+        </div>
+        <div class="mb-3">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+        </div>
+        <form action="{{ url_for('login') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-3">
+                <label for="email" class="form-label">Email Address</label>
+                <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com"
+                    required>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" name="password"
+                    placeholder="Enter your password" required>
+            </div>
+            <div class="mb-4 form-check">
+                <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me">
+                <label class="form-check-label small text-muted" for="remember_me">Remember me for 7 days</label>
+            </div>
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">Login</button>
+            </div>
+        </form>
+        <div class="text-center mt-3">
+            <p class="text-muted small">Don't have an account? <a href="{{ url_for('register') }}"
+                    class="text-secondary text-decoration-none">Sign up</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Study Plan Generator - SmartRevise AI{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold mb-2">
+                    <i class="fas fa-calendar-check me-2 text-primary"></i>Smart Study Planner
+                    <span class="ms-2" data-bs-toggle="tooltip" data-bs-placement="top"
+                        title="AI creates a day-wise study roadmap based on your syllabus">
+                        <i class="fas fa-info-circle text-muted fa-xs opacity-50"></i>
+                    </span>
+                </h2>
+                <p class="text-muted">Paste your syllabus or notes, and we'll organize them into a roadmap.</p>
+            </div>
+
+            <div class="card shadow-sm border-0 mb-5">
+                <div class="card-body p-4">
+                    <form method="POST" onsubmit="showLoading(this)">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-end mb-2">
+                                <label for="syllabus_text" class="form-label fw-bold mb-0">Paste Syllabus /
+                                    Topics:</label>
+                                <a href="#" onclick="fillExample(); return false;"
+                                    class="small text-primary text-decoration-none">
+                                    <i class="fas fa-magic me-1"></i>Insert Sample
+                                </a>
+                            </div>
+                            <textarea class="form-control" id="syllabus_text" name="syllabus_text" rows="8"
+                                placeholder="1. Introduction to SQL&#10;2. Keys and Constraints&#10;3. Joins..."
+                                required oninput="checkInput(this)" onkeydown="handleEnter(event)"></textarea>
+                            <div class="form-text mt-1"><i class="fas fa-lightbulb me-1"></i> You can paste full
+                                syllabus or chapter names (one per line)</div>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" id="generate-btn" class="btn btn-primary btn-lg" disabled>
+                                <span class="btn-text"><i class="fas fa-magic me-2"></i>Generate My Plan</span>
+                                <span class="d-none spinner"><i class="fas fa-spinner fa-spin me-2"></i>Generating your
+                                    plan...</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {% if plan %}
+            <div class="mt-5" id="roadmap-section">
+                <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-4 fade-in">
+                    <i class="fas fa-check-circle fa-2x me-3"></i>
+                    <div>
+                        <h5 class="mb-0 fw-bold">Success!</h5>
+                        <p class="mb-0 small">Your study plan is ready!</p>
+                    </div>
+                </div>
+
+                <h4 class="fw-bold mb-4 text-center">Your Personalized Roadmap</h4>
+                <div class="timeline mt-3 ps-2 border-start border-2 border-primary border-opacity-25"
+                    style="margin-left: 10px;">
+                    {% for step in plan %}
+                    <div class="position-relative ps-4 mb-4 fade-in-up"
+                        style="animation-delay: {{ loop.index0 * 100 }}ms">
+                        <div class="position-absolute start-0 top-0 translate-middle-x bg-white p-1"
+                            style="margin-top: -5px;">
+                            {% if step.label == 'Today' %}
+                            <i class="fas fa-check-circle text-primary fa-lg"></i>
+                            {% elif step.label == 'Next' %}
+                            <i class="fas fa-arrow-circle-right text-info fa-lg"></i>
+                            {% else %}
+                            <i class="fas fa-hourglass-half text-secondary fa-lg"></i>
+                            {% endif %}
+                        </div>
+                        <div class="card border-0 bg-white shadow-sm hover-shadow transition-all">
+                            <div class="card-body p-3">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span
+                                        class="badge rounded-pill {{ 'bg-primary' if step.label=='Today' else ('bg-info text-dark' if step.label=='Next' else 'bg-secondary') }} px-3">
+                                        {{ step.label }}
+                                    </span>
+                                </div>
+                                <h5 class="fw-bold text-dark mb-1">{{ step.topic }}</h5>
+                                <p class="mb-0 text-muted small"><i class="fas fa-tasks me-1"></i> {{ step.action }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-shadow:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important;
+    }
+
+    .transition-all {
+        transition: all 0.2s ease;
+    }
+
+    .fade-in {
+        animation: fadeIn 0.5s ease-in;
+    }
+
+    .fade-in-up {
+        animation: fadeInUp 0.5s ease-out backwards;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+<script>
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+
+    function checkInput(textarea) {
+        const btn = document.getElementById('generate-btn');
+        btn.disabled = textarea.value.trim().length === 0;
+    }
+
+    function showLoading(form) {
+        const btn = document.getElementById('generate-btn');
+        const textSpan = btn.querySelector('.btn-text');
+        const spinner = btn.querySelector('.spinner');
+
+        btn.disabled = true;
+        textSpan.classList.add('d-none');
+        spinner.classList.remove('d-none');
+    }
+
+    function fillExample() {
+        const textarea = document.getElementById('syllabus_text');
+        const example = "1. Introduction to Algorithms\n2. Sorting Techniques (Bubble, Merge, Quick)\n3. Searching Algorithms (Binary Search)\n4. Graph Traversal (BFS, DFS)\n5. Dynamic Programming Basics";
+
+        // Typewriter effect
+        let i = 0;
+        textarea.value = "";
+        textarea.focus();
+
+        function typeWriter() {
+            if (i < example.length) {
+                textarea.value += example.charAt(i);
+                i++;
+                setTimeout(typeWriter, 10);
+            } else {
+                checkInput(textarea);
+            }
+        }
+        typeWriter();
+    }
+
+    function handleEnter(e) {
+        if (e.key === 'Enter') {
+            const textarea = e.target;
+            const lines = textarea.value.substr(0, textarea.selectionStart).split("\n");
+            const currentLine = lines[lines.length - 1];
+
+            // Regex to find number at start of line
+            const match = currentLine.match(/^(\d+)\.\s/);
+
+            if (match) {
+                e.preventDefault();
+                const nextNum = parseInt(match[1]) + 1;
+                const insertion = "\n" + nextNum + ". ";
+
+                const start = textarea.selectionStart;
+                const end = textarea.selectionEnd;
+                const value = textarea.value;
+
+                textarea.value = value.substring(0, start) + insertion + value.substring(end);
+                textarea.selectionStart = textarea.selectionEnd = start + insertion.length;
+            }
+        }
+    }
+
+    // Auto-scroll if plan exists
+    {% if plan %}
+    document.addEventListener("DOMContentLoaded", function () {
+        const element = document.getElementById("roadmap-section");
+        if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}

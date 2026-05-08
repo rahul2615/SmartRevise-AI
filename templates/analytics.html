@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - SmartRevise AI{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1">Performance Analytics</h2>
+            <p class="text-muted mb-0">Track your progress and optimize your study routine.</p>
+        </div>
+        <div>
+            <select class="form-select form-select-sm fw-bold border-0 shadow-sm bg-white" id="time-range"
+                style="min-width: 150px;">
+                <option value="week" selected>This Week</option>
+                <option value="month" disabled>This Month (Pro)</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- 1. Metric Cards -->
+    <div class="row g-4 mb-4">
+        <!-- Accuracy -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted small fw-bold text-uppercase mb-1">Overall Accuracy</p>
+                        <h2 class="fw-bold mb-0 text-dark" id="metric-accuracy">--%</h2>
+                        <div class="d-flex align-items-center mt-2">
+                            <span class="badge bg-light text-secondary border me-2" id="metric-accuracy-change">-- vs
+                                last week</span>
+                        </div>
+                    </div>
+                    <div class="icon-square bg-success bg-opacity-10 text-success rounded-3 p-3">
+                        <i class="fas fa-bullseye fa-lg"></i>
+                    </div>
+                </div>
+                <p class="text-muted extra-small mt-3 mb-0" style="font-size: 0.75rem;">
+                    <i class="fas fa-info-circle me-1"></i> Based on correct answers / total questions
+                </p>
+            </div>
+        </div>
+
+        <!-- Questions Solved -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted small fw-bold text-uppercase mb-1">Questions Solved</p>
+                        <h2 class="fw-bold mb-0 text-dark" id="metric-questions">--</h2>
+                        <div class="d-flex align-items-center mt-2">
+                            <span class="badge bg-light text-secondary border me-2" id="metric-questions-change">-- vs
+                                last week</span>
+                        </div>
+                    </div>
+                    <div class="icon-square bg-primary bg-opacity-10 text-primary rounded-3 p-3">
+                        <i class="fas fa-check-double fa-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Study Hours -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100 p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <p class="text-muted small fw-bold text-uppercase mb-1">Total Study Hours</p>
+                        <h2 class="fw-bold mb-0 text-dark" id="metric-hours">--h</h2>
+                        <div class="d-flex align-items-center mt-2">
+                            <span class="badge bg-light text-secondary border me-2" id="metric-hours-change">-- vs last
+                                week</span>
+                        </div>
+                    </div>
+                    <div class="icon-square bg-warning bg-opacity-10 text-warning rounded-3 p-3">
+                        <i class="fas fa-clock fa-lg"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Smart Insight Card -->
+    <div class="card border-0 shadow-sm mb-4 bg-gradient-light position-relative overflow-hidden"
+        style="background: var(--bg-card); border-left: 5px solid #10b981 !important;">
+        <div class="card-body p-4 d-flex align-items-start gap-3">
+            <div class="mt-1">
+                <i class="fas fa-robot text-success fa-2x"></i>
+            </div>
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <h5 class="fw-bold text-dark mb-0">Daily Smart Insight</h5>
+                    <span
+                        class="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1 user-select-none"
+                        style="font-size: 0.7rem;">
+                        <i class="fas fa-sparkles me-1"></i>AI Generated
+                    </span>
+                </div>
+                <p class="text-muted mb-2" id="insight-text">Analyzing your learning patterns...</p>
+                <div id="insight-action" class="d-none">
+                    <a href="#" class="btn btn-sm btn-outline-success fw-bold rounded-pill px-3 mt-1" id="insight-btn">
+                        Action Tip <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <!-- Decorative Circle -->
+        <div class="position-absolute end-0 top-0 opacity-10"
+            style="width: 150px; height: 150px; background: #10b981; border-radius: 50%; transform: translate(30%, -30%);">
+        </div>
+    </div>
+
+    <!-- 3. Charts Row -->
+    <div class="row g-4 mb-4">
+        <!-- Topic Performance -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-layer-group me-2 text-primary"></i>Topic Performance</h6>
+                    <small class="text-muted">Avg. Accuracy</small>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height: 300px;">
+                        <canvas id="topicChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Study Hours -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-chart-line me-2 text-warning"></i>Study Activity</h6>
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary active">7 Days</button>
+                        <button class="btn btn-outline-secondary" disabled>30 Days</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height: 300px;">
+                        <canvas id="hoursChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', loadAnalytics);
+
+    async function loadAnalytics() {
+        try {
+            const response = await fetch('/api/analytics/dashboard');
+            const data = await response.json();
+
+            // 1. Update Metrics
+            updateMetric('metric-accuracy', data.metrics.accuracy.value + '%', data.metrics.accuracy.change, '%');
+            updateMetric('metric-questions', data.metrics.questions.value, data.metrics.questions.change, '');
+            updateMetric('metric-hours', data.metrics.hours.value + 'h', data.metrics.hours.change, 'h');
+
+            // 2. Update Insight
+            const insightText = document.getElementById('insight-text');
+            const insightAction = document.getElementById('insight-action');
+            const insightBtn = document.getElementById('insight-btn');
+
+            if (data.insight) {
+                insightText.innerText = data.insight.text;
+                if (data.insight.action) {
+                    insightAction.classList.remove('d-none');
+                    insightBtn.innerText = data.insight.action;
+                }
+            }
+
+            // 3. Render Topic Chart (Traffic Light)
+            renderTopicChart(data.topics);
+
+            // 4. Render Hours Chart (Goal Line)
+            renderHoursChart(data.chart);
+
+        } catch (error) {
+            console.error('Error loading analytics:', error);
+        }
+    }
+
+    function updateMetric(id, value, change, unit) {
+        document.getElementById(id).innerText = value;
+        const changeEl = document.getElementById(id + '-change');
+
+        let icon = '';
+        let colorClass = 'text-secondary';
+        const sign = change > 0 ? '+' : '';
+
+        if (change > 0) {
+            colorClass = 'text-success';
+            icon = '<i class="fas fa-arrow-up me-1"></i>';
+        } else if (change < 0) {
+            colorClass = 'text-danger';
+            icon = '<i class="fas fa-arrow-down me-1"></i>';
+        } else {
+            icon = '<i class="fas fa-minus me-1"></i>';
+        }
+
+        changeEl.innerHTML = `${icon} ${sign}${change}${unit} vs last week`;
+        changeEl.className = `badge bg-light border me-2 ${colorClass}`;
+    }
+
+    // --- Chart Renderers ---
+
+    function renderTopicChart(topics) {
+        const ctx = document.getElementById('topicChart').getContext('2d');
+
+        // Data prep
+        const labels = topics.map(t => t.name);
+        const data = topics.map(t => t.accuracy);
+        const colors = topics.map(t => t.color); // Backend provided colors
+        const attempts = topics.map(t => t.attempts);
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Accuracy %',
+                    data: data,
+                    backgroundColor: colors,
+                    borderRadius: 5,
+                    barThickness: 20
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y', // Horizontal Bar
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function (context) {
+                                return `Attempts: ${attempts[context.dataIndex]}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: '#f3f4f6' }
+                    },
+                    y: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderHoursChart(chartData) {
+        const ctx = document.getElementById('hoursChart').getContext('2d');
+
+        // Goal Line Data (Constant)
+        const goalData = Array(chartData.labels.length).fill(chartData.goal);
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: chartData.labels,
+                datasets: [
+                    {
+                        label: 'Study Hours',
+                        data: chartData.data,
+                        borderColor: '#2563EB',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#2563EB',
+                        pointRadius: 4
+                    },
+                    {
+                        label: 'Daily Goal',
+                        data: goalData,
+                        borderColor: '#9CA3AF',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointRadius: 0,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom',
+                        labels: { usePointStyle: true, boxWidth: 8 }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: 5,
+                        grid: { color: '#f3f4f6' },
+                        title: { display: true, text: 'Hours' }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% block title %}{{ group.name }} - SmartRevise AI{% endblock %}
+{% block content %}
+<div class="container-fluid py-4" style="height:calc(100vh - 70px)">
+    <div class="row h-100 g-3">
+        <!-- Left: Chat + Members -->
+        <div class="col-lg-4 h-100 d-flex flex-column">
+            <div class="glass-card flex-grow-1 d-flex flex-column overflow-hidden p-0 border-0" style="border-radius:20px">
+                <!-- Group Header -->
+                <div class="card-header bg-transparent border-bottom p-3 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div class="icon-circle bg-blue-100 text-primary me-2" style="width:40px;height:40px"><i class="fas fa-users"></i></div>
+                        <div><h6 class="mb-0 fw-bold text-dark font-outfit">{{ group.name }}</h6>
+                        <small class="text-muted">Code: <span class="fw-bold text-primary" id="invite-code">{{ group.invite_code }}</span> <button class="btn btn-sm p-0 ms-1" onclick="navigator.clipboard.writeText('{{group.invite_code}}');this.innerHTML='<i class=\'fas fa-check text-success\'></i>'"><i class="fas fa-copy text-muted" style="font-size:11px"></i></button></small></div>
+                    </div>
+                    <a href="{{ url_for('study_groups') }}" class="btn btn-light btn-sm rounded-circle" title="Back"><i class="fas fa-arrow-left"></i></a>
+                </div>
+                <!-- Online Members -->
+                <div class="p-3 border-bottom" style="background:rgba(99,102,241,.03)">
+                    <small class="fw-bold text-muted text-uppercase" style="font-size:.7rem"><i class="fas fa-circle text-success me-1" style="font-size:6px"></i>Members ({{ members|length }})</small>
+                    <div class="d-flex gap-2 mt-2 flex-wrap" id="members-list">
+                        {% for m in members %}
+                        <span class="badge bg-light text-dark border rounded-pill px-2 py-1" style="font-size:.75rem">
+                            {% if m.role == 'admin' %}<i class="fas fa-crown text-warning me-1" style="font-size:8px"></i>{% endif %}
+                            {{ m.user.username }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <!-- Chat Messages -->
+                <div class="flex-grow-1 overflow-auto p-3" id="chat-box" style="scroll-behavior:smooth"></div>
+                <!-- Chat Input -->
+                <div class="border-top p-3" style="background:var(--bg-card)">
+                    <div class="input-group" style="border-radius:12px;background:var(--input-bg);padding:4px">
+                        <input type="text" id="chat-input" class="form-control border-0 bg-transparent" placeholder="Type a message..." style="box-shadow:none;font-size:.9rem" onkeydown="if(event.key==='Enter')sendChat()">
+                        <button class="btn btn-primary rounded-circle m-1 d-flex align-items-center justify-content-center" onclick="sendChat()" style="width:35px;height:35px"><i class="fas fa-paper-plane" style="font-size:.8rem"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Shared PDF + Quiz + Annotations -->
+        <div class="col-lg-8 h-100 d-flex flex-column">
+            <!-- Tabs -->
+            <ul class="nav nav-pills mb-3 gap-2" id="roomTabs">
+                <li><button class="btn btn-light rounded-pill px-3 py-2 fw-bold shadow-sm active btn-sm" onclick="switchRoomTab('pdf',this)"><i class="fas fa-file-pdf me-1"></i>Shared PDF</button></li>
+                <li><button class="btn btn-light rounded-pill px-3 py-2 fw-bold shadow-sm btn-sm" onclick="switchRoomTab('quiz',this)"><i class="fas fa-trophy me-1"></i>Group Quiz</button></li>
+                <li><button class="btn btn-light rounded-pill px-3 py-2 fw-bold shadow-sm btn-sm" onclick="switchRoomTab('annotations',this)"><i class="fas fa-highlighter me-1"></i>Annotations</button></li>
+            </ul>
+
+            <!-- Shared PDF Tab -->
+            <div class="glass-card flex-grow-1 p-4 overflow-auto" id="tab-pdf">
+                {% if shared_pdf %}
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold text-dark mb-0"><i class="fas fa-file-pdf text-danger me-2"></i>{{ shared_pdf.filename }}</h6>
+                    <span class="badge bg-light text-dark border">{{ shared_pdf.num_pages }} pages · {{ shared_pdf.word_count }} words</span>
+                </div>
+                <div class="p-4 rounded-3" style="background: var(--input-bg);max-height:60vh;overflow-y:auto;white-space:pre-wrap;font-family:'Inter',sans-serif;font-size:.9rem;line-height:1.8">{{ shared_pdf.extracted_text[:5000] }}{% if shared_pdf.extracted_text|length > 5000 %}...{% endif %}</div>
+                {% else %}
+                <div class="text-center py-5">
+                    <div class="icon-circle bg-light text-danger mx-auto mb-3" style="width:70px;height:70px;font-size:2rem"><i class="fas fa-file-pdf"></i></div>
+                    <h5 class="fw-bold text-dark font-outfit">No PDF Shared Yet</h5>
+                    <p class="text-muted small mb-4">Share a PDF so everyone can study together</p>
+                    {% if user_pdfs %}
+                    <select id="pdf-select" class="form-select border-0 shadow-sm mx-auto mb-3" style="max-width:300px;border-radius:10px">
+                        {% for pdf in user_pdfs %}<option value="{{pdf.id}}">{{pdf.filename}}</option>{% endfor %}
+                    </select>
+                    <button class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm" onclick="sharePDF()"><i class="fas fa-share me-2"></i>Share with Group</button>
+                    {% else %}
+                    <p class="text-muted small">Upload a PDF in the <a href="{{ url_for('pdf_analyzer') }}">PDF AI</a> section first.</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Group Quiz Tab -->
+            <div class="glass-card flex-grow-1 p-4 overflow-auto d-none" id="tab-quiz">
+                <div class="text-center" id="quiz-start">
+                    <div class="icon-circle bg-purple-100 text-purple mx-auto mb-3" style="width:70px;height:70px;font-size:2rem"><i class="fas fa-trophy"></i></div>
+                    <h5 class="fw-bold text-dark font-outfit">Group Quiz Challenge</h5>
+                    <p class="text-muted small mb-4">Compete with your group on the shared PDF!</p>
+                    <button class="btn btn-primary rounded-pill px-5 py-3 fw-bold shadow hover-scale" onclick="startGroupQuiz()"><i class="fas fa-bolt me-2"></i>Start Quiz</button>
+                    <!-- Live Scoreboard -->
+                    <div id="scoreboard" class="mt-4"></div>
+                </div>
+                <div id="quiz-area" class="d-none"></div>
+            </div>
+
+            <!-- Annotations Tab -->
+            <div class="glass-card flex-grow-1 p-4 overflow-auto d-none" id="tab-annotations">
+                <h6 class="fw-bold text-dark mb-3 font-outfit"><i class="fas fa-highlighter text-warning me-2"></i>Shared Annotations</h6>
+                <div id="annotations-list" class="mb-4">
+                    {% for msg in messages %}{% if msg.msg_type == 'annotation' %}
+                    <div class="note-card mb-2"><small class="text-primary fw-bold">{{ msg.user.username }}</small><br>{{ msg.message }}</div>
+                    {% endif %}{% endfor %}
+                </div>
+                <div class="input-group" style="border-radius:12px;background:#f1f5f9;padding:4px">
+                    <input type="text" id="annotation-input" class="form-control border-0 bg-transparent" placeholder="Add a note or highlight..." onkeydown="if(event.key==='Enter')sendAnnotation()">
+                    <button class="btn btn-warning rounded-pill px-3 m-1 fw-bold" onclick="sendAnnotation()" style="font-size:.85rem"><i class="fas fa-plus me-1"></i>Add</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+#roomTabs .active{background:linear-gradient(135deg,#6366f1,#8b5cf6)!important;color:#fff!important}
+#roomTabs button:hover:not(.active){background:#e0e7ff!important;color:#4f46e5!important}
+.chat-msg{margin-bottom:10px;animation:fadeIn .3s}
+.chat-msg-user{text-align:right}
+.chat-msg-user .bubble{background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border-radius:14px 14px 0 14px;display:inline-block;padding:8px 14px;max-width:80%;font-size:.9rem}
+.chat-msg-other .bubble{background: var(--bg-card);border:1px solid #e2e8f0;border-radius:14px 14px 14px 0;display:inline-block;padding:8px 14px;max-width:80%;font-size:.9rem}
+.chat-msg-system{text-align:center}.chat-msg-system .bubble{background:#f1f5f9;color:#64748b;border-radius:20px;display:inline-block;padding:4px 14px;font-size:.75rem}
+.note-card{background: var(--bg-card);border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;transition:all .2s}
+.note-card:hover{border-left:3px solid #f59e0b;transform:translateX(3px)}
+.score-entry{background: var(--bg-card);border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;margin:6px 0;display:flex;justify-content:space-between;align-items:center}
+.mcq-option{background: var(--input-bg);border:2px solid #e2e8f0;border-radius:10px;padding:10px 14px;margin:5px 0;cursor:pointer;transition:all .2s;font-size:.9rem}
+.mcq-option:hover{border-color:#6366f1;background:#eff6ff}
+.mcq-option.selected{border-color:#6366f1;background:#eff6ff;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
+.mcq-option.correct{border-color:#10b981!important;background:#ecfdf5!important}
+.mcq-option.wrong{border-color:#ef4444!important;background:#fef2f2!important}
+</style>
+
+<!-- SocketIO -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+<script>
+const GROUP_ID={{group.id}};
+const USER_ID={{current_user.id}};
+const USERNAME="{{current_user.username}}";
+const socket=io();
+const chatBox=document.getElementById('chat-box');
+
+// Connect to room
+socket.emit('join_group',{group_id:GROUP_ID,username:USERNAME});
+
+// Load existing messages
+{% for msg in messages %}
+addChatMsg("{{msg.user.username}}","{{msg.message|e}}","{{msg.msg_type}}","{{msg.created_at.strftime('%H:%M')}}");
+{% endfor %}
+scrollChat();
+
+// Real-time events
+socket.on('new_message',d=>{addChatMsg(d.username,d.message,d.type,d.time);scrollChat()});
+socket.on('status',d=>{addChatMsg('System',d.msg,'system','')});
+socket.on('user_joined',d=>{addChatMsg('System',d.username+' joined the group','system','')});
+socket.on('user_left',d=>{addChatMsg('System',d.username+' left the group','system','')});
+socket.on('pdf_shared',d=>{addChatMsg('System',d.username+' shared PDF: '+d.filename,'system','');setTimeout(()=>location.reload(),1500)});
+socket.on('new_annotation',d=>{
+    const list=document.getElementById('annotations-list');
+    list.innerHTML+=`<div class="note-card mb-2"><small class="text-primary fw-bold">${d.username}</small><br>${d.text}</div>`;
+});
+socket.on('score_update',d=>{
+    const sb=document.getElementById('scoreboard');
+    const existing=document.getElementById('score-'+d.username);
+    const pct=Math.round((d.score/d.total)*100);
+    const html=`<div class="score-entry" id="score-${d.username}"><span class="fw-bold"><i class="fas fa-user-circle text-primary me-2"></i>${d.username}</span><span class="fw-bold ${pct>=70?'text-success':'text-warning'}">${d.score}/${d.total} (${pct}%)</span></div>`;
+    if(existing)existing.outerHTML=html;else sb.innerHTML+=html;
+});
+
+function addChatMsg(username,message,type,time){
+    let cls='chat-msg-other';
+    if(type==='system')cls='chat-msg-system';
+    else if(username===USERNAME)cls='chat-msg-user';
+    let nameTag=type==='system'?'':`<small class="text-muted fw-bold" style="font-size:.7rem">${username}</small><br>`;
+    if(username===USERNAME)nameTag='';
+    chatBox.innerHTML+=`<div class="chat-msg ${cls}">${nameTag}<div class="bubble">${message}</div>${time?`<small class="text-muted" style="font-size:.65rem">${time}</small>`:''}</div>`;
+}
+function scrollChat(){chatBox.scrollTop=chatBox.scrollHeight}
+
+function sendChat(){
+    const input=document.getElementById('chat-input');
+    const msg=input.value.trim();if(!msg)return;input.value='';
+    socket.emit('send_message',{group_id:GROUP_ID,user_id:USER_ID,username:USERNAME,message:msg,type:'text'});
+}
+
+function sendAnnotation(){
+    const input=document.getElementById('annotation-input');
+    const text=input.value.trim();if(!text)return;input.value='';
+    socket.emit('annotation',{group_id:GROUP_ID,user_id:USER_ID,username:USERNAME,text:text});
+}
+
+async function sharePDF(){
+    const sel=document.getElementById('pdf-select');
+    if(!sel)return;
+    const res=await fetch(`/api/groups/${GROUP_ID}/share_pdf`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pdf_id:parseInt(sel.value)})});
+    const data=await res.json();
+    if(data.success)location.reload();else alert(data.error||'Failed');
+}
+
+function switchRoomTab(tab,btn){
+    document.querySelectorAll('[id^="tab-"]').forEach(t=>{if(t.id.startsWith('tab-'))t.classList.add('d-none')});
+    document.getElementById('tab-'+tab).classList.remove('d-none');
+    document.querySelectorAll('#roomTabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+}
+
+async function startGroupQuiz(){
+    document.getElementById('quiz-start').innerHTML='<div class="spinner-border text-primary"></div><p class="text-muted mt-3">Generating quiz from shared PDF...</p>';
+    try{
+        const res=await fetch(`/api/groups/${GROUP_ID}/quiz`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({num_questions:5})});
+        const data=await res.json();
+        if(data.error){document.getElementById('quiz-start').innerHTML=`<p class="text-danger">${data.error}</p>`;return}
+        renderGroupQuiz(data.mcqs);
+    }catch(e){document.getElementById('quiz-start').innerHTML='<p class="text-danger">Failed to generate quiz</p>'}
+}
+
+function renderGroupQuiz(mcqs){
+    document.getElementById('quiz-start').classList.add('d-none');
+    const area=document.getElementById('quiz-area');area.classList.remove('d-none');
+    let html='<h5 class="fw-bold text-dark mb-4 font-outfit"><i class="fas fa-trophy text-warning me-2"></i>Group Quiz Challenge</h5>';
+    mcqs.forEach((q,i)=>{
+        html+=`<div class="mb-4 p-3 rounded-3" style="background: var(--input-bg)" id="gq-${q.id}" data-answer="${q.answer}">
+            <p class="fw-bold text-dark mb-2"><span class="badge bg-primary rounded-pill me-2">${i+1}</span>${q.question}</p>`;
+        q.options.forEach(o=>{html+=`<div class="mcq-option" onclick="selectGQ(this,'gq-${q.id}')" data-value="${o}">${o}</div>`});
+        html+=`</div>`;
+    });
+    html+=`<div class="text-center"><button class="btn btn-success rounded-pill px-5 py-2 fw-bold shadow-sm" onclick="submitGroupQuiz()"><i class="fas fa-check me-2"></i>Submit & Compare</button></div>`;
+    area.innerHTML=html;
+}
+
+function selectGQ(el,cardId){
+    document.querySelectorAll('#'+cardId+' .mcq-option').forEach(o=>o.classList.remove('selected'));
+    el.classList.add('selected');
+}
+
+function submitGroupQuiz(){
+    let score=0,total=0;
+    document.querySelectorAll('[id^="gq-"]').forEach(card=>{
+        const answer=card.dataset.answer;
+        const selected=card.querySelector('.mcq-option.selected');
+        total++;
+        card.querySelectorAll('.mcq-option').forEach(o=>{if(o.dataset.value===answer)o.classList.add('correct')});
+        if(selected){if(selected.dataset.value===answer){score++;selected.classList.add('correct')}else{selected.classList.add('wrong')}}
+    });
+    socket.emit('quiz_score',{group_id:GROUP_ID,username:USERNAME,score:score,total:total});
+    const area=document.getElementById('quiz-area');
+    const pct=total?Math.round((score/total)*100):0;
+    const emoji=pct>=80?'🏆':pct>=50?'👍':'📚';
+    area.insertAdjacentHTML('afterbegin',`<div class="text-center glass-card p-4 mb-4 fade-in"><h4 class="fw-bold">${emoji} Your Score: ${score}/${total} (${pct}%)</h4><p class="text-muted">See how others did in the scoreboard!</p></div>`);
+}
+</script>
+{% endblock %}
