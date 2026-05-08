@@ -4,7 +4,7 @@ services:
     env: python
     buildCommand: "bash ./build.sh"
     startCommand: "gunicorn -k eventlet -w 1 app:app"
-    plan: starter # Starter plan recommended due to ML model memory requirements
+    plan: free # Starter plan recommended due to ML model memory requirements, but switched to free per user request
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
