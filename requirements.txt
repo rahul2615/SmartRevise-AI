@@ -26,6 +26,6 @@ networkx
 
 # --- Production Deployment ---
 gunicorn
-eventlet
+
 psycopg2-binary
 python-dotenv
