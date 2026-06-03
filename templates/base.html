@@ -80,8 +80,24 @@
                             <i class="fas fa-bell" id="notif-icon"></i>
                         </button>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link btn btn-outline-danger btn-sm px-3 ms-2" href="{{ url_for('logout') }}">Logout</a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center gap-2 p-1 px-2" href="javascript:void(0)" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            {% if current_user.profile_picture %}
+                            <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_picture) }}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:2px solid var(--border-color);">
+                            {% else %}
+                            <span style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:white;">{{ current_user.username[0]|upper }}</span>
+                            {% endif %}
+                            <span class="d-none d-lg-inline" style="font-size:0.85rem;">{{ current_user.username }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" style="min-width:200px;">
+                            <li class="px-3 py-2 border-bottom">
+                                <div class="fw-bold" style="font-size:0.85rem;">{{ current_user.username }}</div>
+                                <small class="text-muted">{{ current_user.email }}</small>
+                            </li>
+                            <li><a class="dropdown-item py-2" href="{{ url_for('profile') }}"><i class="fas fa-user-cog me-2 text-primary"></i>Profile & Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item py-2 text-danger" href="{{ url_for('logout') }}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        </ul>
                     </li>
                     {% else %}
                     <li class="nav-item">
@@ -260,6 +276,44 @@
 
     <!-- Heartbeat for Time Tracking -->
     {% if current_user.is_authenticated %}
+    <!-- SocketIO Global Connection for Notifications -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script>
+        // Only initialize socket if it hasn't been initialized already (e.g. by group_room.html)
+        if (typeof socket === 'undefined') {
+            window.globalSocket = io();
+        } else {
+            window.globalSocket = socket;
+        }
+
+        window.globalSocket.on('connect', () => {
+            console.log('Connected to global socket for notifications');
+        });
+        
+        window.globalSocket.on('global_notification', (data) => {
+            const toastContainer = document.getElementById('toast-container');
+            if (toastContainer) {
+                const toastHtml = `
+                <div class="toast border-0 mb-2 shadow-lg show bg-white" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header bg-primary text-white">
+                        <i class="fas fa-users me-2"></i>
+                        <strong class="me-auto">${data.title}</strong>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body d-flex flex-column gap-2 text-dark">
+                        <span>${data.message}</span>
+                        <a href="${data.link}" class="btn btn-sm btn-outline-primary align-self-start">View Group</a>
+                    </div>
+                </div>`;
+                toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            }
+            
+            // Optionally also show browser notification if enabled
+            if (window.notifEnabled && document.hidden) {
+                new Notification(data.title, {body: data.message});
+            }
+        });
+    </script>
     <script>
         setInterval(() => {
             fetch("{{ url_for('update_time') }}", {

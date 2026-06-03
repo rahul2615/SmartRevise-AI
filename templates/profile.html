@@ -1,0 +1,519 @@
+{% extends "base.html" %}
+{% block title %}Profile & Settings - SmartRevise AI{% endblock %}
+{% block content %}
+
+<style>
+.profile-container { max-width: 800px; margin: 0 auto; }
+
+.profile-hero {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: var(--shadow-card);
+    margin-bottom: 1.5rem;
+}
+.profile-hero-top {
+    height: 120px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+    position: relative;
+}
+.profile-hero-body {
+    padding: 0 2rem 2rem;
+    position: relative;
+}
+.profile-avatar-wrap {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin-top: -50px;
+    cursor: pointer;
+}
+.profile-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 4px solid var(--bg-card);
+    object-fit: cover;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+.profile-avatar-initial {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 4px solid var(--bg-card);
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: white;
+    font-family: 'Outfit', sans-serif;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+.avatar-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    border: 4px solid transparent;
+}
+.profile-avatar-wrap:hover .avatar-overlay { opacity: 1; }
+
+.settings-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    box-shadow: var(--shadow-card);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+.settings-card-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.settings-card-header .icon-box {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+.settings-card-body { padding: 1.5rem; }
+
+.settings-input {
+    background: var(--input-bg);
+    border: 1.5px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0.7rem 1rem;
+    color: var(--text-main);
+    font-size: 0.9rem;
+    width: 100%;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.settings-input:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+}
+.settings-input::placeholder { color: var(--text-muted); }
+
+.settings-label {
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+    display: block;
+}
+
+.btn-save {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 0.65rem 1.5rem;
+    font-weight: 700;
+    font-family: 'Outfit', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+.btn-save:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99,102,241,0.35);
+    color: white;
+}
+.btn-save:disabled { opacity: 0.5; transform: none; }
+
+.goal-slider-track {
+    position: relative;
+    height: 8px;
+    background: var(--input-bg);
+    border-radius: 10px;
+    margin: 1rem 0;
+    border: 1px solid var(--border-color);
+}
+.goal-slider-fill {
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #10b981, #06b6d4, #6366f1);
+    transition: width 0.3s;
+}
+input[type="range"].goal-range {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    background: transparent;
+    position: absolute;
+    top: 0; left: 0;
+    margin: 0;
+    cursor: pointer;
+}
+input[type="range"].goal-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border: 3px solid var(--bg-card);
+    box-shadow: 0 2px 8px rgba(99,102,241,0.4);
+    cursor: pointer;
+    margin-top: -7px;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 48px; height: 26px;
+    display: inline-block;
+}
+.toggle-switch input { display: none; }
+.toggle-slider {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--border-color);
+    border-radius: 26px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: white;
+    top: 3px; left: 3px;
+    transition: transform 0.3s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-switch input:checked + .toggle-slider { background: #6366f1; }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(22px); }
+
+.pref-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.9rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.pref-row:last-child { border-bottom: none; }
+
+.member-since {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.sg-toast-container {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 9999;
+}
+.sg-toast {
+    background: var(--bg-card);
+    border-radius: 14px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+    animation: slideUp 0.3s ease;
+    border-left: 4px solid #6366f1;
+    min-width: 280px;
+    color: var(--text-main);
+}
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+}
+</style>
+
+<div class="container py-4">
+    <div class="profile-container">
+
+        <!-- Profile Hero -->
+        <div class="profile-hero">
+            <div class="profile-hero-top"></div>
+            <div class="profile-hero-body">
+                <div class="d-flex flex-column flex-sm-row align-items-start gap-3">
+                    <div class="profile-avatar-wrap" onclick="document.getElementById('picture-input').click()">
+                        {% if current_user.profile_picture %}
+                        <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_picture) }}" class="profile-avatar" id="avatar-img" alt="Profile">
+                        {% else %}
+                        <div class="profile-avatar-initial" id="avatar-initial">{{ current_user.username[0]|upper }}</div>
+                        {% endif %}
+                        <div class="avatar-overlay">
+                            <i class="fas fa-camera text-white fs-5"></i>
+                        </div>
+                        <input type="file" id="picture-input" accept="image/*" style="display:none" onchange="uploadPicture(this)">
+                    </div>
+                    <div class="pt-2">
+                        <h4 class="fw-bold mb-0" style="font-family:'Outfit',sans-serif; color: var(--text-main);">{{ current_user.username }}</h4>
+                        <p class="mb-1" style="color: var(--text-muted); font-size:0.9rem;">{{ current_user.email }}</p>
+                        <div class="d-flex gap-2 align-items-center flex-wrap mt-1">
+                            <span class="member-since"><i class="fas fa-calendar-alt"></i> Joined {{ current_user.created_at.strftime('%b %Y') if current_user.created_at else 'N/A' }}</span>
+                            <span class="badge rounded-pill px-2 py-1" style="background: linear-gradient(135deg,#6366f1,#8b5cf6); color:white; font-size:0.7rem;">{{ current_user.role|capitalize }}</span>
+                            {% if current_user.bio %}
+                            <span style="color: var(--text-muted); font-size:0.85rem;">· {{ current_user.bio }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Settings -->
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="icon-box" style="background:rgba(99,102,241,0.1); color:#6366f1;"><i class="fas fa-user-edit"></i></div>
+                <div>
+                    <h6 class="fw-bold mb-0" style="font-family:'Outfit',sans-serif; color: var(--text-main);">Account Settings</h6>
+                    <small style="color: var(--text-muted);">Update your display name and bio</small>
+                </div>
+            </div>
+            <div class="settings-card-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="settings-label">Display Name</label>
+                        <input type="text" class="settings-input" id="input-username" value="{{ current_user.username }}" maxlength="50">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="settings-label">Email <span style="font-size:0.65rem; font-weight:400;">(cannot be changed)</span></label>
+                        <input type="text" class="settings-input" value="{{ current_user.email }}" disabled style="opacity:0.6;">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="settings-label">Bio</label>
+                    <input type="text" class="settings-input" id="input-bio" value="{{ current_user.bio or '' }}" placeholder="Tell us a bit about yourself..." maxlength="300">
+                </div>
+                <button class="btn-save" onclick="saveProfile()"><i class="fas fa-check me-2"></i>Save Changes</button>
+            </div>
+        </div>
+
+        <!-- Change Password -->
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="icon-box" style="background:rgba(245,158,11,0.1); color:#f59e0b;"><i class="fas fa-lock"></i></div>
+                <div>
+                    <h6 class="fw-bold mb-0" style="font-family:'Outfit',sans-serif; color: var(--text-main);">Change Password</h6>
+                    <small style="color: var(--text-muted);">Update your account password</small>
+                </div>
+            </div>
+            <div class="settings-card-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-12">
+                        <label class="settings-label">Current Password</label>
+                        <input type="password" class="settings-input" id="input-old-pw" placeholder="Enter current password">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="settings-label">New Password</label>
+                        <input type="password" class="settings-input" id="input-new-pw" placeholder="Minimum 6 characters">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="settings-label">Confirm New Password</label>
+                        <input type="password" class="settings-input" id="input-confirm-pw" placeholder="Re-enter new password">
+                    </div>
+                </div>
+                <button class="btn-save" onclick="changePassword()" style="background:linear-gradient(135deg,#f59e0b,#ef4444);"><i class="fas fa-key me-2"></i>Change Password</button>
+            </div>
+        </div>
+
+        <!-- Preferences -->
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="icon-box" style="background:rgba(16,185,129,0.1); color:#10b981;"><i class="fas fa-sliders-h"></i></div>
+                <div>
+                    <h6 class="fw-bold mb-0" style="font-family:'Outfit',sans-serif; color: var(--text-main);">Preferences</h6>
+                    <small style="color: var(--text-muted);">Customize your experience</small>
+                </div>
+            </div>
+            <div class="settings-card-body" style="padding-top:0.5rem; padding-bottom:0.5rem;">
+                <div class="pref-row">
+                    <div>
+                        <div class="fw-bold" style="font-size:0.9rem; color:var(--text-main);"><i class="fas fa-moon me-2 text-primary"></i>Dark Mode</div>
+                        <small style="color:var(--text-muted);">Switch between light and dark theme</small>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-theme" onchange="toggleThemeFromProfile()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="pref-row">
+                    <div>
+                        <div class="fw-bold" style="font-size:0.9rem; color:var(--text-main);"><i class="fas fa-bell me-2 text-warning"></i>Study Notifications</div>
+                        <small style="color:var(--text-muted);">Get nudges every 30 minutes</small>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="toggle-notif" onchange="toggleNotifFromProfile()">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Study Goal -->
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="icon-box" style="background:rgba(236,72,153,0.1); color:#ec4899;"><i class="fas fa-bullseye"></i></div>
+                <div>
+                    <h6 class="fw-bold mb-0" style="font-family:'Outfit',sans-serif; color: var(--text-main);">Daily Study Goal</h6>
+                    <small style="color: var(--text-muted);">Set your daily target in minutes</small>
+                </div>
+            </div>
+            <div class="settings-card-body">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span style="color:var(--text-muted); font-size:0.8rem; font-weight:600;">10 min</span>
+                    <span class="fw-bold" style="font-size:1.5rem; font-family:'Outfit',sans-serif; color:var(--primary-color);" id="goal-display">{{ current_user.daily_study_goal or 60 }} min</span>
+                    <span style="color:var(--text-muted); font-size:0.8rem; font-weight:600;">8 hrs</span>
+                </div>
+                <div class="goal-slider-track">
+                    <div class="goal-slider-fill" id="goal-fill" style="width: {{ ((current_user.daily_study_goal or 60) / 480 * 100)|round }}%;"></div>
+                    <input type="range" class="goal-range" id="goal-slider" min="10" max="480" step="5" value="{{ current_user.daily_study_goal or 60 }}" oninput="updateGoalUI(this.value)">
+                </div>
+                <div class="d-flex gap-2 flex-wrap mt-3">
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="setGoalQuick(30)">30 min</button>
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="setGoalQuick(60)">1 hr</button>
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="setGoalQuick(120)">2 hrs</button>
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="setGoalQuick(180)">3 hrs</button>
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="setGoalQuick(240)">4 hrs</button>
+                </div>
+                <div class="text-end mt-3">
+                    <button class="btn-save" onclick="saveGoal()"><i class="fas fa-bullseye me-2"></i>Save Goal</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Toast container -->
+<div class="sg-toast-container" id="profile-toast-container"></div>
+
+<script>
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+// Initialize toggles based on current state
+document.addEventListener('DOMContentLoaded', () => {
+    const theme = document.documentElement.getAttribute('data-theme');
+    document.getElementById('toggle-theme').checked = (theme === 'dark');
+    document.getElementById('toggle-notif').checked = (localStorage.getItem('sr-notif') === 'true');
+});
+
+function showToast(msg, icon = '✅') {
+    const c = document.getElementById('profile-toast-container');
+    const t = document.createElement('div');
+    t.className = 'sg-toast';
+    t.innerHTML = `<span style="font-size:1.2rem;">${icon}</span><span class="fw-medium">${msg}</span>`;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+}
+
+async function saveProfile() {
+    const username = document.getElementById('input-username').value.trim();
+    const bio = document.getElementById('input-bio').value.trim();
+    if (!username) { showToast('Name cannot be empty', '⚠️'); return; }
+    const res = await fetch('/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ username, bio })
+    });
+    const data = await res.json();
+    if (data.success) showToast(data.message, '✅');
+    else showToast(data.error, '❌');
+}
+
+async function changePassword() {
+    const old_password = document.getElementById('input-old-pw').value;
+    const new_password = document.getElementById('input-new-pw').value;
+    const confirm_password = document.getElementById('input-confirm-pw').value;
+    if (!old_password || !new_password || !confirm_password) { showToast('All fields are required', '⚠️'); return; }
+    const res = await fetch('/profile/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ old_password, new_password, confirm_password })
+    });
+    const data = await res.json();
+    if (data.success) {
+        showToast(data.message, '✅');
+        document.getElementById('input-old-pw').value = '';
+        document.getElementById('input-new-pw').value = '';
+        document.getElementById('input-confirm-pw').value = '';
+    } else showToast(data.error, '❌');
+}
+
+async function uploadPicture(input) {
+    if (!input.files.length) return;
+    const formData = new FormData();
+    formData.append('picture', input.files[0]);
+    const res = await fetch('/profile/upload-picture', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrfToken },
+        body: formData
+    });
+    const data = await res.json();
+    if (data.success) {
+        showToast(data.message, '📸');
+        // Replace avatar with uploaded image
+        const wrap = document.querySelector('.profile-avatar-wrap');
+        const existing = wrap.querySelector('.profile-avatar, .profile-avatar-initial');
+        if (existing) existing.remove();
+        const img = document.createElement('img');
+        img.src = data.picture_url;
+        img.className = 'profile-avatar';
+        img.id = 'avatar-img';
+        img.alt = 'Profile';
+        wrap.insertBefore(img, wrap.querySelector('.avatar-overlay'));
+    } else showToast(data.error, '❌');
+}
+
+function toggleThemeFromProfile() {
+    toggleDarkMode();
+}
+
+function toggleNotifFromProfile() {
+    toggleNotifications();
+}
+
+function updateGoalUI(val) {
+    document.getElementById('goal-display').textContent = val + ' min';
+    document.getElementById('goal-fill').style.width = (val / 480 * 100) + '%';
+}
+
+function setGoalQuick(val) {
+    document.getElementById('goal-slider').value = val;
+    updateGoalUI(val);
+}
+
+async function saveGoal() {
+    const goal = parseInt(document.getElementById('goal-slider').value);
+    const res = await fetch('/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+        body: JSON.stringify({ daily_study_goal: goal })
+    });
+    const data = await res.json();
+    if (data.success) showToast(`Daily goal set to ${goal} minutes`, '🎯');
+    else showToast(data.error, '❌');
+}
+</script>
+{% endblock %}

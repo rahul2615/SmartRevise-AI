@@ -13,6 +13,7 @@ flask-wtf
 # --- Web & API ---
 requests
 google-generativeai
+Authlib
 
 # --- PDF Processing ---
 PyPDF2

@@ -62,7 +62,7 @@ def test_advanced_features():
     print("Testing MCQ Templates:")
     mcqs = mcq_gen.generate_mcqs(text, 2)
     for q in mcqs:
-        print(f"[{q['type']}] {q['question']}")
+        print(f"[{q.get('type', q.get('subtopic', 'General'))}] {q['question']}")
         
     print("\nTesting Short Questions:")
     sqs = mcq_gen.generate_short_questions(text, 2)

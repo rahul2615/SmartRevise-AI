@@ -1,0 +1,246 @@
+/* --- EdTech "Study-Focused" UI/UX - SmartRevise AI --- */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600&display=swap');
+
+body.landing-page {
+    background-color: var(--bg-body);
+    /* Soft grid paper background */
+    background-image: 
+        linear-gradient(rgba(99, 102, 241, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+    background-size: 30px 30px;
+    background-position: center center;
+    position: relative;
+}
+[data-theme="dark"] body.landing-page {
+    background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+.landing-wrapper {
+    position: relative;
+    overflow-x: hidden;
+    padding-bottom: 100px;
+    z-index: 10;
+}
+
+/* ==================================================
+   1. ACADEMIC TYPOGRAPHY
+   ================================================== */
+.academic-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(3.5rem, 6vw, 5.5rem);
+    font-weight: 800;
+    line-height: 1.15;
+    color: var(--text-main);
+    margin-bottom: 30px;
+}
+.academic-title i {
+    font-style: italic;
+    color: var(--primary-color);
+}
+
+.study-subtext {
+    font-size: clamp(1.2rem, 2vw, 1.5rem);
+    max-width: 700px;
+    color: var(--text-muted);
+    line-height: 1.8;
+}
+
+/* ==================================================
+   2. HIGHLIGHTER PEN ANIMATION
+   ================================================== */
+.highlighter {
+    position: relative;
+    display: inline-block;
+    z-index: 1;
+    font-weight: 700;
+}
+.highlighter::after {
+    content: '';
+    position: absolute;
+    left: -2%;
+    bottom: 5px;
+    width: 104%;
+    height: 35%;
+    background-color: #fef08a; /* Bright yellow marker */
+    z-index: -1;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+    border-radius: 4px;
+    opacity: 0.8;
+}
+[data-theme="dark"] .highlighter::after {
+    background-color: rgba(250, 204, 21, 0.4); /* Darker yellow for dark mode */
+}
+/* Triggered by AOS or JS when scrolled into view */
+.highlighter.aos-animate::after, 
+.highlighter.drawn::after {
+    transform: scaleX(1);
+}
+
+/* Alternate green highlighter */
+.highlighter-green::after { background-color: #bbf7d0; }
+[data-theme="dark"] .highlighter-green::after { background-color: rgba(74, 222, 128, 0.3); }
+
+/* ==================================================
+   3. HERO SECTION
+   ================================================== */
+.study-hero {
+    min-height: 90vh;
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding-top: 60px;
+}
+
+.hero-badge {
+    display: inline-block;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 8px 24px;
+    border-radius: 30px;
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    margin-bottom: 25px;
+    font-family: 'Inter', sans-serif;
+}
+
+.btn-study-primary {
+    background: var(--text-main);
+    color: var(--bg-body) !important;
+    border-radius: 12px;
+    padding: 16px 40px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: 2px solid var(--text-main);
+}
+.btn-study-primary:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    background: transparent;
+    color: var(--text-main) !important;
+}
+
+/* ==================================================
+   4. 3D INTERACTIVE FLASHCARDS
+   ================================================== */
+.flashcard-section {
+    padding: 80px 0;
+    position: relative;
+    z-index: 10;
+}
+
+.flashcard {
+    background-color: transparent;
+    width: 100%;
+    height: 380px;
+    perspective: 1500px; /* Gives the 3D depth */
+    margin-bottom: 30px;
+}
+
+.flashcard-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform-style: preserve-3d;
+}
+
+/* Do the flip on hover */
+.flashcard:hover .flashcard-inner {
+    transform: rotateY(180deg);
+}
+
+/* Front and Back styling */
+.flashcard-front, .flashcard-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    border-radius: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+/* Front Design */
+.flashcard-front {
+    z-index: 2;
+}
+.flashcard-icon {
+    font-size: 3.5rem;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+}
+.flashcard-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+.flip-hint {
+    position: absolute;
+    bottom: 20px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+/* Back Design */
+.flashcard-back {
+    transform: rotateY(180deg);
+    background: var(--input-bg);
+    border: 2px dashed var(--border-color);
+}
+.flashcard-back p {
+    font-size: 1.1rem;
+    line-height: 1.7;
+    color: var(--text-main);
+}
+
+/* --- Floating Study Decor --- */
+.decor-icon {
+    position: absolute;
+    font-size: 2.5rem;
+    opacity: 0.15;
+    z-index: -1;
+    animation: float 6s ease-in-out infinite;
+}
+[data-theme="dark"] .decor-icon { opacity: 0.05; }
+.decor-1 { top: 20%; left: 10%; animation-delay: 0s; }
+.decor-2 { top: 60%; right: 15%; animation-delay: -2s; }
+.decor-3 { bottom: 10%; left: 20%; animation-delay: -4s; }
+
+@keyframes float {
+    0% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(10deg); }
+    100% { transform: translateY(0) rotate(0deg); }
+}
+
+/* --- Footer CTA --- */
+.study-cta {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 30px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+    padding: 80px 40px;
+    position: relative;
+    overflow: hidden;
+}
+.study-cta::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 6px;
+    background: linear-gradient(90deg, #6366f1, #ec4899);
+}

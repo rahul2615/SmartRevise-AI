@@ -145,6 +145,16 @@ class MCQGenerator:
             {"template": "In this context, what does <KEYWORD> refer to?", "type": "Reference"}
         ]
 
+        # 2. Short Answer Question Templates
+        self.quiz_templates = [
+            "Define <KEYWORD> in your own words.",
+            "Explain the concept of <KEYWORD>.",
+            "What is the significance of <KEYWORD>?",
+            "How does <KEYWORD> relate to <OTHER>?",
+            "Describe the role of <KEYWORD> in this context.",
+            "Compare <KEYWORD> and <OTHER>.",
+        ]
+
     def _get_distractors(self, word):
         distractors = set()
         try:
@@ -239,6 +249,7 @@ class MCQGenerator:
                 'difficulty': current_diff_label, 
                 'badge_color': badge_color,
                 'topic': "General ML",
+                'type': template_obj['type'],
                 'subtopic': template_obj['type'],
                 'hint': hint,
                 'explanation': explanation
@@ -474,7 +485,7 @@ class AITutor:
                     # Use Gemini API — Fast: flash-lite, Think: flash (deeper reasoning)
                     import google.generativeai as genai
                     genai.configure(api_key=api_key)
-                    gemini_model = 'gemini-3-flash-preview' if model_type == "think" else 'gemini-3.1-flash-lite-preview'
+                    gemini_model = 'gemini-1.5-pro' if model_type == "think" else 'gemini-1.5-flash'
                     model = genai.GenerativeModel(gemini_model)
                     response = model.generate_content(full_prompt)
                     if response.text:

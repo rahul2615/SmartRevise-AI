@@ -16,11 +16,28 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
+from authlib.integrations.flask_client import OAuth
+from werkzeug.utils import secure_filename
+import re
 
 from dotenv import load_dotenv
 load_dotenv()  # Load environment variables from .env file if it exists
 
 app = Flask(__name__)
+
+# ==========================================
+# OAuth Setup
+# ==========================================
+oauth = OAuth(app)
+oauth.register(
+    name='google',
+    client_id=os.environ.get('GOOGLE_CLIENT_ID', 'placeholder_client_id'),
+    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET', 'placeholder_client_secret'),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={
+        'scope': 'openid email profile'
+    }
+)
 
 # ==========================================
 # Security Configuration
@@ -171,6 +188,10 @@ def login():
 
         user = User.query.filter_by(email=email).first()
 
+        if user and user.is_active is False:
+            flash('This account has been deactivated by an administrator.', 'danger')
+            return render_template('login.html')
+
         # Check account lockout
         if user and user.is_locked:
             remaining = int((user.locked_until - datetime.utcnow()).total_seconds() / 60) + 1
@@ -219,8 +240,18 @@ def login():
 def register():
     if request.method == 'POST':
         username = request.form.get('fullname') # Matching the name in register.html
-        email = request.form.get('email')
-        password = request.form.get('password')
+        email = request.form.get('email', '').strip().lower()
+        password = request.form.get('password', '')
+        
+        # 1. Email Domain Validation
+        if not email.endswith('@gmail.com') and not email.endswith('@smartrevise.com'):
+            flash('Registration failed: Email must end with @gmail.com or @smartrevise.com', 'danger')
+            return render_template('register.html')
+
+        # 2. Password Complexity Validation
+        if len(password) < 8 or not re.search(r'[A-Z]', password) or not re.search(r'\d', password):
+            flash('Registration failed: Password must be at least 8 characters long and contain at least one uppercase letter and one number.', 'danger')
+            return render_template('register.html')
         
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
         user = User(username=username, email=email, password=hashed_password)
@@ -234,6 +265,74 @@ def register():
             flash(f'Error: {e}', 'danger')
             
     return render_template('register.html')
+
+# ==========================================
+# Google OAuth Routes
+# ==========================================
+@app.route('/login/google')
+def login_google():
+    redirect_uri = url_for('authorize_google', _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
+@app.route('/login/google/authorize')
+def authorize_google():
+    try:
+        token = oauth.google.authorize_access_token()
+        resp = oauth.google.get('https://www.googleapis.com/oauth2/v3/userinfo')
+        user_info = resp.json()
+        
+        email = user_info.get('email', '').lower()
+        
+        # Domain validation for OAuth too
+        if not email.endswith('@gmail.com') and not email.endswith('@smartrevise.com'):
+            flash('Login failed: Only @gmail.com and @smartrevise.com domains are allowed.', 'danger')
+            return redirect(url_for('login'))
+            
+        user = User.query.filter_by(email=email).first()
+        
+        if user and user.is_active is False:
+            flash('This account has been deactivated by an administrator.', 'danger')
+            return redirect(url_for('login'))
+        
+        if not user:
+            # Auto-register Google users
+            username = user_info.get('name', email.split('@')[0])
+            # Use a random secure password for OAuth accounts
+            random_pw = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
+            hashed_password = bcrypt.generate_password_hash(random_pw).decode('utf-8')
+            
+            user = User(username=username, email=email, password=hashed_password)
+            db.session.add(user)
+            db.session.commit()
+            
+        # Check lockout
+        if user.is_locked:
+            remaining = int((user.locked_until - datetime.utcnow()).total_seconds() / 60) + 1
+            flash(f'Account temporarily locked. Try again in {remaining} minutes.', 'danger')
+            return redirect(url_for('login'))
+            
+        # Log the user in securely
+        user.failed_login_attempts = 0
+        user.locked_until = None
+        user.last_login_at = datetime.utcnow()
+        user.last_login_ip = request.remote_addr
+        
+        new_token = str(uuid.uuid4())
+        user.session_token = new_token
+        db.session.commit()
+        
+        login_user(user, remember=True)
+        session.permanent = True
+        session['session_token'] = new_token
+        session['session_fingerprint'] = _generate_session_fingerprint()
+        session['last_activity'] = datetime.utcnow().isoformat()
+        
+        flash('Successfully logged in with Google!', 'success')
+        return redirect(url_for('dashboard'))
+        
+    except Exception as e:
+        flash(f'Google Login Failed: {str(e)}', 'danger')
+        return redirect(url_for('login'))
 
 @app.before_request
 def update_streak():
@@ -1073,7 +1172,7 @@ def planner_action():
                 else:
                     import google.generativeai as genai
                     genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-3-flash-preview')
+                    model = genai.GenerativeModel('gemini-1.5-flash')
                     response = model.generate_content(prompt)
                     if response.text:
                         suggestion = response.text.strip().replace('"', '')
@@ -1391,7 +1490,7 @@ def group_room(group_id):
     user_pdfs = PDFDocument.query.filter_by(user_id=current_user.id).all()
     return render_template('group_room.html', group=group, members=members,
                            messages=messages, shared_pdf=shared_pdf, user_pdfs=user_pdfs,
-                           is_admin=(membership.role == 'admin'))
+                           is_admin=(membership.role == 'admin'), timedelta=timedelta)
 
 @app.route('/api/groups/<int:group_id>/share_pdf', methods=['POST'])
 @login_required
@@ -1440,6 +1539,11 @@ def leave_group(group_id):
     return jsonify({"success": True})
 
 # SocketIO Events
+@socketio.on('connect')
+def handle_connect():
+    if current_user.is_authenticated:
+        join_room(f"user_{current_user.id}")
+
 @socketio.on('join_group')
 def handle_join_group(data):
     room = f"group_{data['group_id']}"
@@ -1464,12 +1568,25 @@ def handle_message(data):
         db.session.add(msg)
         db.session.commit()
 
-    emit('new_message', {
-        'username': username,
-        'message': message,
-        'type': msg_type,
-        'time': datetime.utcnow().strftime('%H:%M')
-    }, room=f'group_{group_id}')
+        # Emit to group room
+        emit('new_message', {
+            'username': username,
+            'message': message,
+            'type': msg_type,
+            'time': (datetime.utcnow() + timedelta(hours=5, minutes=30)).strftime('%H:%M')
+        }, room=f'group_{group_id}')
+
+        # Broadcast global notification to other members
+        group = StudyGroup.query.get(group_id)
+        if group:
+            members = GroupMember.query.filter_by(group_id=group_id).all()
+            for member in members:
+                if str(member.user_id) != str(user_id):
+                    emit('global_notification', {
+                        'title': f'New message in {group.name}',
+                        'message': f"{username}: {message}",
+                        'link': url_for('group_room', group_id=group_id)
+                    }, room=f'user_{member.user_id}')
 
 @socketio.on('quiz_score')
 def handle_quiz_score(data):
@@ -1492,6 +1609,125 @@ def handle_annotation(data):
         'text': data['text'],
         'time': datetime.utcnow().strftime('%H:%M')
     }, room=f'group_{group_id}')
+
+# ==========================================
+# Profile & Settings
+# ==========================================
+
+ALLOWED_PICTURE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads', 'profiles')
+
+def allowed_picture(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_PICTURE_EXTENSIONS
+
+@app.route('/profile')
+@login_required
+def profile():
+    """Profile & Settings page."""
+    return render_template('profile.html')
+
+@app.route('/profile/update', methods=['POST'])
+@login_required
+def profile_update():
+    """Update display name, bio, study goal."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'error': 'No data provided'}), 400
+
+    username = data.get('username', '').strip()
+    bio = data.get('bio', '').strip()
+    daily_goal = data.get('daily_study_goal')
+
+    if username:
+        if len(username) < 2 or len(username) > 50:
+            return jsonify({'success': False, 'error': 'Username must be 2-50 characters'}), 400
+        current_user.username = username
+
+    if bio is not None:
+        if len(bio) > 300:
+            return jsonify({'success': False, 'error': 'Bio must be under 300 characters'}), 400
+        current_user.bio = bio
+
+    if daily_goal is not None:
+        try:
+            daily_goal = int(daily_goal)
+            if daily_goal < 10 or daily_goal > 480:
+                return jsonify({'success': False, 'error': 'Study goal must be 10-480 minutes'}), 400
+            current_user.daily_study_goal = daily_goal
+        except (ValueError, TypeError):
+            return jsonify({'success': False, 'error': 'Invalid study goal value'}), 400
+
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Profile updated successfully'})
+
+@app.route('/profile/change-password', methods=['POST'])
+@login_required
+def profile_change_password():
+    """Change password — requires old password verification."""
+    data = request.get_json()
+    if not data:
+        return jsonify({'success': False, 'error': 'No data provided'}), 400
+
+    old_password = data.get('old_password', '')
+    new_password = data.get('new_password', '')
+    confirm_password = data.get('confirm_password', '')
+
+    if not old_password or not new_password:
+        return jsonify({'success': False, 'error': 'All fields are required'}), 400
+
+    if new_password != confirm_password:
+        return jsonify({'success': False, 'error': 'New passwords do not match'}), 400
+
+    if len(new_password) < 6:
+        return jsonify({'success': False, 'error': 'Password must be at least 6 characters'}), 400
+
+    # Verify old password
+    if not bcrypt.check_password_hash(current_user.password, old_password):
+        return jsonify({'success': False, 'error': 'Current password is incorrect'}), 400
+
+    current_user.password = bcrypt.generate_password_hash(new_password).decode('utf-8')
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Password changed successfully'})
+
+@app.route('/profile/upload-picture', methods=['POST'])
+@login_required
+def profile_upload_picture():
+    """Upload profile picture."""
+    if 'picture' not in request.files:
+        return jsonify({'success': False, 'error': 'No file provided'}), 400
+
+    file = request.files['picture']
+    if file.filename == '':
+        return jsonify({'success': False, 'error': 'No file selected'}), 400
+
+    if not allowed_picture(file.filename):
+        return jsonify({'success': False, 'error': 'Only PNG, JPG, GIF, WEBP files are allowed'}), 400
+
+    # Generate unique filename
+    ext = file.filename.rsplit('.', 1)[1].lower()
+    filename = f"{uuid.uuid4().hex}.{ext}"
+
+    # Ensure upload directory exists
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+    # Delete old picture if exists
+    if current_user.profile_picture:
+        old_path = os.path.join(UPLOAD_FOLDER, current_user.profile_picture)
+        if os.path.exists(old_path):
+            os.remove(old_path)
+
+    # Save new picture
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    file.save(filepath)
+
+    current_user.profile_picture = filename
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'Profile picture updated',
+        'picture_url': url_for('static', filename=f'uploads/profiles/{filename}')
+    })
 
 # ==========================================
 # Admin Panel & User Management
@@ -1552,16 +1788,42 @@ def delete_user(user_id):
     user = User.query.get_or_404(user_id)
     if user.id == current_user.id:
         return jsonify({"error": "Cannot delete yourself"}), 400
-    _log_admin_action('delete_user', target_user_id=user_id, details=f'Deleted user: {user.username} ({user.email})')
-    # Clean up user data
-    RevisionNote.query.filter_by(user_id=user_id).delete()
-    MCQScore.query.filter_by(user_id=user_id).delete()
-    StudyPlan.query.filter_by(user_id=user_id).delete()
-    CodeSubmission.query.filter_by(user_id=user_id).delete()
-    GroupMember.query.filter_by(user_id=user_id).delete()
-    db.session.delete(user)
+    _log_admin_action('delete_user', target_user_id=user_id, details=f'Disabled user: {user.username} ({user.email})')
+    # Soft delete
+    user.is_active = False
+    user.session_token = None # Force logout
     db.session.commit()
     return jsonify({"success": True})
+
+@app.route('/admin/audit/<int:log_id>/revoke', methods=['POST'])
+@admin_required
+def revoke_admin_action(log_id):
+    log = AdminAuditLog.query.get_or_404(log_id)
+    if log.is_revoked:
+        return jsonify({"error": "Action already revoked"}), 400
+        
+    if log.action == 'delete_user':
+        user = User.query.get(log.target_user_id)
+        if user:
+            user.is_active = True
+            log.is_revoked = True
+            db.session.commit()
+            return jsonify({"success": True, "message": "User account restored."})
+        return jsonify({"error": "User not found"}), 404
+        
+    elif log.action == 'role_change':
+        user = User.query.get(log.target_user_id)
+        if user:
+            parts = log.details.split(' → ')
+            if len(parts) == 2:
+                old_role = parts[0].strip()
+                user.role = old_role
+                log.is_revoked = True
+                db.session.commit()
+                return jsonify({"success": True, "message": f"Role reverted to {old_role}."})
+        return jsonify({"error": "User or previous role not found"}), 404
+        
+    return jsonify({"error": "This action cannot be revoked"}), 400
 
 @app.route('/admin/user/<int:user_id>/reset', methods=['POST'])
 @admin_required

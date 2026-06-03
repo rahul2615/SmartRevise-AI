@@ -1,27 +1,40 @@
 {% extends "base.html" %}
 {% block title %}{{ group.name }} - SmartRevise AI{% endblock %}
 {% block content %}
-<div class="container-fluid py-4" style="height:calc(100vh - 70px)">
+<div class="container-fluid py-3 px-4" style="height:calc(100vh - 70px)">
     <div class="row h-100 g-3">
         <!-- Left: Chat + Members -->
         <div class="col-lg-4 h-100 d-flex flex-column">
-            <div class="glass-card flex-grow-1 d-flex flex-column overflow-hidden p-0 border-0" style="border-radius:20px">
+            <div class="gr-chat-panel flex-grow-1 d-flex flex-column overflow-hidden">
                 <!-- Group Header -->
-                <div class="card-header bg-transparent border-bottom p-3 d-flex justify-content-between align-items-center">
-                    <div class="d-flex align-items-center">
-                        <div class="icon-circle bg-blue-100 text-primary me-2" style="width:40px;height:40px"><i class="fas fa-users"></i></div>
-                        <div><h6 class="mb-0 fw-bold text-dark font-outfit">{{ group.name }}</h6>
-                        <small class="text-muted">Code: <span class="fw-bold text-primary" id="invite-code">{{ group.invite_code }}</span> <button class="btn btn-sm p-0 ms-1" onclick="navigator.clipboard.writeText('{{group.invite_code}}');this.innerHTML='<i class=\'fas fa-check text-success\'></i>'"><i class="fas fa-copy text-muted" style="font-size:11px"></i></button></small></div>
+                <div class="gr-header">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="gr-avatar">{{ group.name[0]|upper }}</div>
+                        <div>
+                            <h6 class="mb-0 fw-bold text-white" style="font-family:'Outfit',sans-serif;">{{ group.name }}</h6>
+                            <div class="d-flex align-items-center gap-2 mt-1">
+                                <span class="gr-code-badge" id="invite-code">{{ group.invite_code }}</span>
+                                <button class="btn btn-sm p-0 text-white opacity-75" onclick="navigator.clipboard.writeText('{{group.invite_code}}');this.innerHTML='<i class=\'fas fa-check\'></i>'">
+                                    <i class="fas fa-copy" style="font-size:11px"></i>
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    <a href="{{ url_for('study_groups') }}" class="btn btn-light btn-sm rounded-circle" title="Back"><i class="fas fa-arrow-left"></i></a>
+                    <a href="{{ url_for('study_groups') }}" class="btn btn-sm text-white" style="background:rgba(255,255,255,0.15);border-radius:10px;padding:6px 10px;" title="Back">
+                        <i class="fas fa-arrow-left"></i>
+                    </a>
                 </div>
                 <!-- Online Members -->
-                <div class="p-3 border-bottom" style="background:rgba(99,102,241,.03)">
-                    <small class="fw-bold text-muted text-uppercase" style="font-size:.7rem"><i class="fas fa-circle text-success me-1" style="font-size:6px"></i>Members ({{ members|length }})</small>
+                <div class="gr-members-bar">
+                    <small class="fw-bold text-uppercase" style="font-size:.65rem;color:#94a3b8;letter-spacing:0.5px;">
+                        <i class="fas fa-circle text-success me-1" style="font-size:5px;vertical-align:middle;"></i>Members · {{ members|length }}
+                    </small>
                     <div class="d-flex gap-2 mt-2 flex-wrap" id="members-list">
+                        {% set colors = ['#6366f1','#10b981','#f59e0b','#ec4899','#3b82f6','#14b8a6'] %}
                         {% for m in members %}
-                        <span class="badge bg-light text-dark border rounded-pill px-2 py-1" style="font-size:.75rem">
-                            {% if m.role == 'admin' %}<i class="fas fa-crown text-warning me-1" style="font-size:8px"></i>{% endif %}
+                        <span class="gr-member-pill">
+                            <span class="gr-member-dot" style="background:{{ colors[loop.index0 % 6] }};">{{ m.user.username[0]|upper }}</span>
+                            {% if m.role == 'admin' %}<i class="fas fa-crown text-warning" style="font-size:7px;margin-right:2px;"></i>{% endif %}
                             {{ m.user.username }}
                         </span>
                         {% endfor %}
@@ -30,10 +43,10 @@
                 <!-- Chat Messages -->
                 <div class="flex-grow-1 overflow-auto p-3" id="chat-box" style="scroll-behavior:smooth"></div>
                 <!-- Chat Input -->
-                <div class="border-top p-3" style="background:var(--bg-card)">
-                    <div class="input-group" style="border-radius:12px;background:var(--input-bg);padding:4px">
+                <div class="gr-chat-input-area">
+                    <div class="gr-chat-input-wrapper">
                         <input type="text" id="chat-input" class="form-control border-0 bg-transparent" placeholder="Type a message..." style="box-shadow:none;font-size:.9rem" onkeydown="if(event.key==='Enter')sendChat()">
-                        <button class="btn btn-primary rounded-circle m-1 d-flex align-items-center justify-content-center" onclick="sendChat()" style="width:35px;height:35px"><i class="fas fa-paper-plane" style="font-size:.8rem"></i></button>
+                        <button class="gr-send-btn" onclick="sendChat()"><i class="fas fa-paper-plane" style="font-size:.75rem"></i></button>
                     </div>
                 </div>
             </div>
@@ -42,27 +55,32 @@
         <!-- Right: Shared PDF + Quiz + Annotations -->
         <div class="col-lg-8 h-100 d-flex flex-column">
             <!-- Tabs -->
-            <ul class="nav nav-pills mb-3 gap-2" id="roomTabs">
-                <li><button class="btn btn-light rounded-pill px-3 py-2 fw-bold shadow-sm active btn-sm" onclick="switchRoomTab('pdf',this)"><i class="fas fa-file-pdf me-1"></i>Shared PDF</button></li>
-                <li><button class="btn btn-light rounded-pill px-3 py-2 fw-bold shadow-sm btn-sm" onclick="switchRoomTab('quiz',this)"><i class="fas fa-trophy me-1"></i>Group Quiz</button></li>
-                <li><button class="btn btn-light rounded-pill px-3 py-2 fw-bold shadow-sm btn-sm" onclick="switchRoomTab('annotations',this)"><i class="fas fa-highlighter me-1"></i>Annotations</button></li>
-            </ul>
+            <div class="gr-tabs mb-3" id="roomTabs">
+                <button class="gr-tab active" onclick="switchRoomTab('pdf',this)"><i class="fas fa-file-pdf me-2"></i>Shared PDF</button>
+                <button class="gr-tab" onclick="switchRoomTab('quiz',this)"><i class="fas fa-trophy me-2"></i>Group Quiz</button>
+                <button class="gr-tab" onclick="switchRoomTab('annotations',this)"><i class="fas fa-highlighter me-2"></i>Annotations</button>
+            </div>
 
             <!-- Shared PDF Tab -->
-            <div class="glass-card flex-grow-1 p-4 overflow-auto" id="tab-pdf">
+            <div class="gr-content-card flex-grow-1 overflow-auto" id="tab-pdf">
                 {% if shared_pdf %}
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="fw-bold text-dark mb-0"><i class="fas fa-file-pdf text-danger me-2"></i>{{ shared_pdf.filename }}</h6>
-                    <span class="badge bg-light text-dark border">{{ shared_pdf.num_pages }} pages · {{ shared_pdf.word_count }} words</span>
+                <div class="gr-pdf-header mb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="gr-pdf-icon"><i class="fas fa-file-pdf"></i></div>
+                        <div>
+                            <h6 class="fw-bold text-dark mb-0" style="font-family:'Outfit',sans-serif;">{{ shared_pdf.filename }}</h6>
+                            <small class="text-muted">{{ shared_pdf.num_pages }} pages · {{ shared_pdf.word_count }} words</small>
+                        </div>
+                    </div>
                 </div>
-                <div class="p-4 rounded-3" style="background: var(--input-bg);max-height:60vh;overflow-y:auto;white-space:pre-wrap;font-family:'Inter',sans-serif;font-size:.9rem;line-height:1.8">{{ shared_pdf.extracted_text[:5000] }}{% if shared_pdf.extracted_text|length > 5000 %}...{% endif %}</div>
+                <div class="gr-pdf-content">{{ shared_pdf.extracted_text[:5000] }}{% if shared_pdf.extracted_text|length > 5000 %}...{% endif %}</div>
                 {% else %}
                 <div class="text-center py-5">
-                    <div class="icon-circle bg-light text-danger mx-auto mb-3" style="width:70px;height:70px;font-size:2rem"><i class="fas fa-file-pdf"></i></div>
-                    <h5 class="fw-bold text-dark font-outfit">No PDF Shared Yet</h5>
+                    <div class="gr-empty-icon mx-auto mb-3">📄</div>
+                    <h5 class="fw-bold text-dark" style="font-family:'Outfit',sans-serif;">No PDF Shared Yet</h5>
                     <p class="text-muted small mb-4">Share a PDF so everyone can study together</p>
                     {% if user_pdfs %}
-                    <select id="pdf-select" class="form-select border-0 shadow-sm mx-auto mb-3" style="max-width:300px;border-radius:10px">
+                    <select id="pdf-select" class="form-select border-0 shadow-sm mx-auto mb-3" style="max-width:300px;border-radius:12px;padding:10px">
                         {% for pdf in user_pdfs %}<option value="{{pdf.id}}">{{pdf.filename}}</option>{% endfor %}
                     </select>
                     <button class="btn btn-primary rounded-pill px-4 py-2 fw-bold shadow-sm" onclick="sharePDF()"><i class="fas fa-share me-2"></i>Share with Group</button>
@@ -74,27 +92,28 @@
             </div>
 
             <!-- Group Quiz Tab -->
-            <div class="glass-card flex-grow-1 p-4 overflow-auto d-none" id="tab-quiz">
+            <div class="gr-content-card flex-grow-1 overflow-auto d-none" id="tab-quiz">
                 <div class="text-center" id="quiz-start">
-                    <div class="icon-circle bg-purple-100 text-purple mx-auto mb-3" style="width:70px;height:70px;font-size:2rem"><i class="fas fa-trophy"></i></div>
-                    <h5 class="fw-bold text-dark font-outfit">Group Quiz Challenge</h5>
+                    <div class="gr-empty-icon mx-auto mb-3">🏆</div>
+                    <h5 class="fw-bold text-dark" style="font-family:'Outfit',sans-serif;">Group Quiz Challenge</h5>
                     <p class="text-muted small mb-4">Compete with your group on the shared PDF!</p>
-                    <button class="btn btn-primary rounded-pill px-5 py-3 fw-bold shadow hover-scale" onclick="startGroupQuiz()"><i class="fas fa-bolt me-2"></i>Start Quiz</button>
-                    <!-- Live Scoreboard -->
-                    <div id="scoreboard" class="mt-4"></div>
+                    <button class="btn btn-primary rounded-pill px-5 py-3 fw-bold shadow" onclick="startGroupQuiz()" style="transition:transform 0.2s;" onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'">
+                        <i class="fas fa-bolt me-2"></i>Start Quiz
+                    </button>
+                    <div id="scoreboard" class="mt-4 text-start mx-auto" style="max-width:400px;"></div>
                 </div>
                 <div id="quiz-area" class="d-none"></div>
             </div>
 
             <!-- Annotations Tab -->
-            <div class="glass-card flex-grow-1 p-4 overflow-auto d-none" id="tab-annotations">
-                <h6 class="fw-bold text-dark mb-3 font-outfit"><i class="fas fa-highlighter text-warning me-2"></i>Shared Annotations</h6>
+            <div class="gr-content-card flex-grow-1 overflow-auto d-none" id="tab-annotations">
+                <h6 class="fw-bold text-dark mb-3" style="font-family:'Outfit',sans-serif;"><i class="fas fa-highlighter text-warning me-2"></i>Shared Annotations</h6>
                 <div id="annotations-list" class="mb-4">
                     {% for msg in messages %}{% if msg.msg_type == 'annotation' %}
                     <div class="note-card mb-2"><small class="text-primary fw-bold">{{ msg.user.username }}</small><br>{{ msg.message }}</div>
                     {% endif %}{% endfor %}
                 </div>
-                <div class="input-group" style="border-radius:12px;background:#f1f5f9;padding:4px">
+                <div class="gr-chat-input-wrapper">
                     <input type="text" id="annotation-input" class="form-control border-0 bg-transparent" placeholder="Add a note or highlight..." onkeydown="if(event.key==='Enter')sendAnnotation()">
                     <button class="btn btn-warning rounded-pill px-3 m-1 fw-bold" onclick="sendAnnotation()" style="font-size:.85rem"><i class="fas fa-plus me-1"></i>Add</button>
                 </div>
@@ -104,21 +123,246 @@
 </div>
 
 <style>
-#roomTabs .active{background:linear-gradient(135deg,#6366f1,#8b5cf6)!important;color:#fff!important}
-#roomTabs button:hover:not(.active){background:#e0e7ff!important;color:#4f46e5!important}
-.chat-msg{margin-bottom:10px;animation:fadeIn .3s}
-.chat-msg-user{text-align:right}
-.chat-msg-user .bubble{background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border-radius:14px 14px 0 14px;display:inline-block;padding:8px 14px;max-width:80%;font-size:.9rem}
-.chat-msg-other .bubble{background: var(--bg-card);border:1px solid #e2e8f0;border-radius:14px 14px 14px 0;display:inline-block;padding:8px 14px;max-width:80%;font-size:.9rem}
-.chat-msg-system{text-align:center}.chat-msg-system .bubble{background:#f1f5f9;color:#64748b;border-radius:20px;display:inline-block;padding:4px 14px;font-size:.75rem}
-.note-card{background: var(--bg-card);border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;transition:all .2s}
-.note-card:hover{border-left:3px solid #f59e0b;transform:translateX(3px)}
-.score-entry{background: var(--bg-card);border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;margin:6px 0;display:flex;justify-content:space-between;align-items:center}
-.mcq-option{background: var(--input-bg);border:2px solid #e2e8f0;border-radius:10px;padding:10px 14px;margin:5px 0;cursor:pointer;transition:all .2s;font-size:.9rem}
-.mcq-option:hover{border-color:#6366f1;background:#eff6ff}
-.mcq-option.selected{border-color:#6366f1;background:#eff6ff;box-shadow:0 0 0 3px rgba(99,102,241,.1)}
-.mcq-option.correct{border-color:#10b981!important;background:#ecfdf5!important}
-.mcq-option.wrong{border-color:#ef4444!important;background:#fef2f2!important}
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap');
+
+.gr-chat-panel {
+    background: var(--bg-card);
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+}
+.gr-header {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    padding: 1rem 1.2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.gr-avatar {
+    width: 42px; height: 42px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; font-weight: 800; color: white;
+    font-family: 'Outfit', sans-serif;
+    flex-shrink: 0;
+}
+.gr-code-badge {
+    background: rgba(255,255,255,0.2);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: white;
+    letter-spacing: 2px;
+    font-family: 'Courier New', monospace;
+}
+.gr-members-bar {
+    padding: 0.75rem 1.2rem;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--input-bg);
+}
+.gr-member-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 3px 10px 3px 3px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
+.gr-member-dot {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.6rem; font-weight: 700; color: white;
+}
+.gr-chat-input-area {
+    border-top: 1px solid var(--border-color);
+    padding: 0.75rem 1rem;
+    background: var(--bg-card);
+}
+.gr-chat-input-wrapper {
+    display: flex;
+    align-items: center;
+    background: var(--input-bg);
+    border-radius: 14px;
+    padding: 4px;
+    border: 1px solid var(--border-color);
+    transition: border-color 0.2s;
+}
+.gr-chat-input-wrapper:focus-within {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+.gr-send-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border: none;
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: transform 0.15s;
+}
+.gr-send-btn:hover { transform: scale(1.1); }
+
+/* Tabs */
+.gr-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.gr-tab {
+    border: none;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    border-radius: 14px;
+    padding: 10px 20px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    font-family: 'Outfit', sans-serif;
+    cursor: pointer;
+    transition: all 0.25s;
+    box-shadow: var(--shadow-card);
+    border: 1px solid var(--border-color);
+}
+.gr-tab:hover:not(.active) {
+    background: #ede9fe;
+    color: #6366f1;
+    border-color: #c7d2fe;
+}
+.gr-tab.active {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: white;
+    box-shadow: 0 4px 14px rgba(99,102,241,0.35);
+    border-color: transparent;
+}
+
+/* Content card */
+.gr-content-card {
+    background: var(--bg-card);
+    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-card);
+    padding: 1.5rem;
+}
+.gr-pdf-header {
+    padding: 1rem;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #fef2f2, #fff1f2);
+    border: 1px solid #fecaca;
+}
+.gr-pdf-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ef4444, #f97316);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+.gr-pdf-content {
+    padding: 1.2rem;
+    border-radius: 14px;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    max-height: 58vh;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    font-family: 'Inter', sans-serif;
+    font-size: .88rem;
+    line-height: 1.85;
+    color: var(--text-main);
+}
+.gr-empty-icon {
+    width: 70px; height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ede9fe, #dbeafe);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem;
+}
+
+/* Chat bubbles */
+.chat-msg { margin-bottom: 10px; animation: grFadeIn .3s ease; }
+.chat-msg-user { text-align: right; }
+.chat-msg-user .bubble {
+    background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
+    color: #fff !important;
+    border-radius: 16px 16px 4px 16px;
+    display: inline-block;
+    padding: 10px 16px;
+    max-width: 80%;
+    font-size: .88rem;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.25);
+}
+.chat-msg-other .bubble {
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    border-radius: 16px 16px 16px 4px;
+    display: inline-block;
+    padding: 10px 16px;
+    max-width: 80%;
+    font-size: .88rem;
+}
+.chat-msg-system { text-align: center; }
+.chat-msg-system .bubble {
+    background: var(--input-bg);
+    color: var(--text-muted);
+    border-radius: 20px;
+    display: inline-block;
+    padding: 4px 14px;
+    font-size: .72rem;
+}
+
+/* Notes & Quiz */
+.note-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-left: 3px solid #f59e0b;
+    border-radius: 10px;
+    padding: 10px 14px;
+    transition: all .2s;
+    color: var(--text-main);
+}
+.note-card:hover { transform: translateX(3px); box-shadow: var(--shadow-card); }
+.score-entry {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 10px 16px;
+    margin: 6px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    animation: grFadeIn 0.3s ease;
+}
+.mcq-option {
+    background: var(--input-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 10px 16px;
+    margin: 6px 0;
+    cursor: pointer;
+    transition: all .2s;
+    font-size: .88rem;
+    color: var(--text-main);
+}
+.mcq-option:hover { border-color: #6366f1; background: #eff6ff; }
+.mcq-option.selected { border-color: #6366f1; background: #eff6ff; box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
+.mcq-option.correct { border-color: #10b981 !important; background: #ecfdf5 !important; }
+.mcq-option.wrong { border-color: #ef4444 !important; background: #fef2f2 !important; }
+
+@keyframes grFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
 </style>
 
 <!-- SocketIO -->
@@ -135,7 +379,7 @@ socket.emit('join_group',{group_id:GROUP_ID,username:USERNAME});
 
 // Load existing messages
 {% for msg in messages %}
-addChatMsg("{{msg.user.username}}","{{msg.message|e}}","{{msg.msg_type}}","{{msg.created_at.strftime('%H:%M')}}");
+addChatMsg("{{msg.user.username}}","{{msg.message|e}}","{{msg.msg_type}}","{{(msg.created_at + timedelta(hours=5, minutes=30)).strftime('%H:%M') if msg.created_at else ''}}");
 {% endfor %}
 scrollChat();
 
@@ -207,9 +451,9 @@ async function startGroupQuiz(){
 function renderGroupQuiz(mcqs){
     document.getElementById('quiz-start').classList.add('d-none');
     const area=document.getElementById('quiz-area');area.classList.remove('d-none');
-    let html='<h5 class="fw-bold text-dark mb-4 font-outfit"><i class="fas fa-trophy text-warning me-2"></i>Group Quiz Challenge</h5>';
+    let html='<h5 class="fw-bold text-dark mb-4" style="font-family:\'Outfit\',sans-serif;"><i class="fas fa-trophy text-warning me-2"></i>Group Quiz Challenge</h5>';
     mcqs.forEach((q,i)=>{
-        html+=`<div class="mb-4 p-3 rounded-3" style="background: var(--input-bg)" id="gq-${q.id}" data-answer="${q.answer}">
+        html+=`<div class="mb-4 p-3 rounded-3" style="background:#f8fafc;border:1px solid #e2e8f0;" id="gq-${q.id}" data-answer="${q.answer}">
             <p class="fw-bold text-dark mb-2"><span class="badge bg-primary rounded-pill me-2">${i+1}</span>${q.question}</p>`;
         q.options.forEach(o=>{html+=`<div class="mcq-option" onclick="selectGQ(this,'gq-${q.id}')" data-value="${o}">${o}</div>`});
         html+=`</div>`;
@@ -236,7 +480,7 @@ function submitGroupQuiz(){
     const area=document.getElementById('quiz-area');
     const pct=total?Math.round((score/total)*100):0;
     const emoji=pct>=80?'🏆':pct>=50?'👍':'📚';
-    area.insertAdjacentHTML('afterbegin',`<div class="text-center glass-card p-4 mb-4 fade-in"><h4 class="fw-bold">${emoji} Your Score: ${score}/${total} (${pct}%)</h4><p class="text-muted">See how others did in the scoreboard!</p></div>`);
+    area.insertAdjacentHTML('afterbegin',`<div class="text-center p-4 mb-4" style="background:linear-gradient(135deg,#ede9fe,#dbeafe);border-radius:16px;animation:grFadeIn 0.4s ease;"><h4 class="fw-bold">${emoji} Your Score: ${score}/${total} (${pct}%)</h4><p class="text-muted mb-0">See how others did in the scoreboard!</p></div>`);
 }
 </script>
 {% endblock %}

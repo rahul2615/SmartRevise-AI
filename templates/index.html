@@ -1,126 +1,148 @@
 {% extends 'base.html' %}
 
+{% block extra_css %}
+<!-- AOS CSS for Scroll Animations -->
+<link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+<!-- Landing specific CSS -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}?v=4">
+{% endblock %}
+
 {% block content %}
-<!-- Hero Section -->
-<!-- Hero Section -->
-<section class="hero-centered fade-in" style="padding: 40px 0;">
-    <div class="container">
-        <!-- Illustration & Text Layout -->
-        <div class="row align-items-center justify-content-center">
-            <!-- Left Illustration (Icon Composition) -->
-            <div class="col-lg-3 d-none d-lg-block text-center">
-                <div class="p-4" style="opacity: 0.9;">
-                    <i class="fas fa-book-reader text-primary" style="font-size: 8rem;"></i>
+<div class="landing-wrapper">
+    <!-- Decorative Floating Elements -->
+    <i class="fas fa-graduation-cap decor-icon decor-1 text-primary"></i>
+    <i class="fas fa-book-open decor-icon decor-2 text-success"></i>
+    <i class="fas fa-pencil-alt decor-icon decor-3 text-warning"></i>
+
+    <!-- Hero Section -->
+    <section class="study-hero container text-center d-flex flex-column justify-content-center">
+        <div class="w-100">
+            <div class="hero-badge mb-4" data-aos="fade-down">
+                <i class="fas fa-book text-primary me-2"></i> SmartRevise AI Study Suite
+            </div>
+            
+            <h1 class="academic-title" data-aos="fade-up" data-aos-delay="100">
+                Transform your PDFs into <br>
+                <span class="highlighter" data-aos="fade-in" data-aos-delay="600" data-aos-duration="1000">Interactive Study Sessions</span>
+            </h1>
+            
+            <p class="study-subtext mx-auto mt-4 mb-5" data-aos="fade-up" data-aos-delay="200">
+                Stop passively reading. Use our local ML pipeline to extract key concepts, generate <span class="highlighter highlighter-green" data-aos="fade-in" data-aos-delay="1000">short notes</span>, and take customized quizzes instantly.
+            </p>
+            
+            <div data-aos="fade-up" data-aos-delay="300">
+                <a href="{{ url_for('register') }}" class="btn-study-primary text-decoration-none">
+                    Start Studying Free <i class="fas fa-arrow-right ms-2"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Flashcards Feature Section -->
+    <section id="features" class="flashcard-section container">
+        <div class="text-center mb-5" data-aos="fade-up">
+            <h2 class="academic-title" style="font-size: 2.5rem;">Everything you need to <span class="highlighter" data-aos="fade-in" data-aos-delay="300">Ace your Exams</span></h2>
+        </div>
+        
+        <div class="row">
+            <!-- Flashcard 1 -->
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+                <div class="flashcard">
+                    <div class="flashcard-inner">
+                        <div class="flashcard-front">
+                            <i class="fas fa-file-pdf flashcard-icon text-primary"></i>
+                            <h3 class="flashcard-title">PDF Intelligence</h3>
+                            <div class="flip-hint">Hover to flip ⟳</div>
+                        </div>
+                        <div class="flashcard-back">
+                            <h3 class="flashcard-title mb-3 fs-4">PDF Intelligence</h3>
+                            <p>Upload any textbook or syllabus. Our local ML and Generative AI pipeline extracts key concepts and generates short notes instantly.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            <!-- Central Content (Text) -->
-            <div class="col-lg-6 text-center">
-                <h1 class="hero-title mb-2" style="color: #1E3A8A; font-size: 2.5rem;">Welcome to Intelligent Learning
-                    Platform</h1>
-                <p class="hero-subtitle fst-italic text-primary fw-bold mb-4" style="font-size: 1.25rem;">Revise.
-                    Practice. Succeed.</p>
+            
+            <!-- Flashcard 2 -->
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+                <div class="flashcard">
+                    <div class="flashcard-inner">
+                        <div class="flashcard-front">
+                            <i class="fas fa-code flashcard-icon text-success"></i>
+                            <h3 class="flashcard-title">Coding Assistant</h3>
+                            <div class="flip-hint">Hover to flip ⟳</div>
+                        </div>
+                        <div class="flashcard-back">
+                            <h3 class="flashcard-title mb-3 fs-4">Coding Assistant</h3>
+                            <p>Dynamic challenges tailored to your progress, with a built-in browser compiler for real-time practice.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
-
-            <!-- Right Illustration (Icon Composition) -->
-            <div class="col-lg-3 d-none d-lg-block text-center">
-                <div class="p-4" style="opacity: 0.9;">
-                    <i class="fas fa-laptop-code text-success" style="font-size: 8rem;"></i>
+            
+            <!-- Flashcard 3 -->
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
+                <div class="flashcard">
+                    <div class="flashcard-inner">
+                        <div class="flashcard-front">
+                            <i class="fas fa-users flashcard-icon text-purple"></i>
+                            <h3 class="flashcard-title">Study Groups</h3>
+                            <div class="flip-hint">Hover to flip ⟳</div>
+                        </div>
+                        <div class="flashcard-back">
+                            <h3 class="flashcard-title mb-3 fs-4">Study Groups</h3>
+                            <p>Collaborate with friends using WebSocket-powered live chat and shared PDFs. Study together, anywhere.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Flashcard 4 -->
+            <div class="col-md-6 col-lg-3" data-aos="fade-up" data-aos-delay="400">
+                <div class="flashcard">
+                    <div class="flashcard-inner">
+                        <div class="flashcard-front">
+                            <i class="fas fa-chart-line flashcard-icon text-warning"></i>
+                            <h3 class="flashcard-title">Analytics</h3>
+                            <div class="flip-hint">Hover to flip ⟳</div>
+                        </div>
+                        <div class="flashcard-back">
+                            <h3 class="flashcard-title mb-3 fs-4">Analytics</h3>
+                            <p>Track your study streaks, accuracy, and weak topics with our intelligent dashboard. Let the AI recommend your next best study action.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-</section>
+    </section>
 
-<!-- Feature Cards Section (Row 1) -->
-<section id="features" class="container py-5 fade-in delay-1" style="position: relative; z-index: 10;">
-    <div class="row g-4 justify-content-center">
-        <!-- Daily Revision Notes -->
-        <div class="col-md-4">
-            <div class="clean-card">
-                <i class="fas fa-clipboard-list text-primary fa-3x"></i>
-                <div class="clean-card-content">
-                    <h5>Daily Revision Notes</h5>
-                    <p>Generate concise revision notes for quick learning.</p>
-                </div>
-            </div>
+    <!-- Footer CTA -->
+    <section class="container py-5 my-5" data-aos="fade-up">
+        <div class="study-cta text-center">
+            <h2 class="academic-title mb-4" style="font-size: 3rem;">Ready to transform your study habits?</h2>
+            <p class="study-subtext mx-auto mb-5">Join thousands of students mastering their syllabus with AI.</p>
+            <a href="{{ url_for('register') }}" class="btn-study-primary text-decoration-none">
+                Create Free Account
+            </a>
         </div>
-        <!-- MCQ Practice -->
-        <div class="col-md-4">
-            <div class="clean-card">
-                <div class="d-flex align-items-center justify-content-center rounded bg-success bg-opacity-10"
-                    style="width: 50px; height: 50px;">
-                    <i class="fas fa-question text-success fa-2x"></i>
-                </div>
-                <div class="clean-card-content">
-                    <h5>MCQ Practice</h5>
-                    <p>Test your knowledge with multiple choice questions.</p>
-                </div>
-            </div>
-        </div>
-        <!-- Coding Challenges -->
-        <div class="col-md-4">
-            <div class="clean-card">
-                <div class="d-flex align-items-center justify-content-center rounded bg-dark"
-                    style="width: 50px; height: 50px;">
-                    <i class="fas fa-code text-white fa-lg"></i>
-                </div>
-                <div class="clean-card-content">
-                    <h5>Coding Challenges</h5>
-                    <p>Improve your coding skills with practice problems.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+    </section>
+</div>
 
-<!-- "What We Offer" Section (Row 2) -->
-<section class="offer-section fade-in delay-2">
-    <div class="container">
-        <h3 class="text-center fw-bold mb-2 ps-3 pe-3" style="color: #1E3A8A;">What We Offer</h3>
-        <div class="text-center mb-5">
-            <span class="text-primary fst-italic">Enhance your learning experience with smart and personalized study
-                materials.</span>
-        </div>
+<!-- ================= ANIMATION SCRIPTS ================= -->
+<!-- AOS for Scroll Animations -->
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 
-        <div class="row g-4 justify-content-center">
-            <div class="col-md-4">
-                <div class="offer-item">
-                    <i class="fas fa-cogs offer-icon text-secondary"></i>
-                    <span class="offer-text">AI Generated Notes</span>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="offer-item">
-                    <i class="fas fa-tasks offer-icon text-success"></i>
-                    <span class="offer-text">MCQ Quizzes</span>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="offer-item">
-                    <i class="fas fa-laptop-code offer-icon text-dark"></i>
-                    <span class="offer-text">Coding Exercises</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Force specific body class for this design
+    document.body.className = document.body.className.replace('landing-page', '').trim();
+    document.body.classList.add('landing-page');
 
-<!-- Footer CTA -->
-<section class="footer-cta-section fade-in delay-3">
-    <div class="container">
-        <h2 class="footer-cta-title">Start Your Learning Journey Today!</h2>
-        <a href="{{ url_for('register') }}" class="btn btn-success-green shadow-lg">Get Started</a>
-
-        <!-- Background Elements (Simulating the clouds/rocket/books from image with icons) -->
-        <div class="mt-5 d-none d-md-flex justify-content-between px-5 opacity-50"
-            style="position: absolute; bottom: 0; width: 100%; left: 0; z-index: -1;">
-            <span><i class="fas fa-cloud fa-3x text-white"></i></span>
-            <span class="mb-4"><i class="fas fa-book fa-3x text-danger"></i></span>
-            <span><i class="fas fa-rocket fa-4x text-danger transform-rotate-45"
-                    style="transform: rotate(-45deg);"></i></span>
-            <span class="mb-3"><i class="fas fa-lightbulb fa-3x text-warning"></i></span>
-        </div>
-    </div>
-</section>
+    // === 1. Initialize AOS (Animate on Scroll) ===
+    AOS.init({
+        once: true,
+        offset: 50,
+        easing: 'ease-out-cubic'
+    });
+});
+</script>
 {% endblock %}

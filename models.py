@@ -10,12 +10,18 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
     role = db.Column(db.String(20), default='student')  # 'admin' or 'student'
+    is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Real-time Metrics
     last_active_date = db.Column(db.Date, default=None)
     current_streak = db.Column(db.Integer, default=0)
     total_study_minutes = db.Column(db.Integer, default=0)
+
+    # Profile & Settings
+    profile_picture = db.Column(db.String(300), nullable=True)
+    daily_study_goal = db.Column(db.Integer, default=60)       # minutes/day target
+    bio = db.Column(db.String(300), nullable=True)
 
     # Session Security
     session_token = db.Column(db.String(100), nullable=True)   # Single-session enforcement
@@ -149,6 +155,7 @@ class AdminAuditLog(db.Model):
     target_user_id = db.Column(db.Integer, nullable=True)
     details = db.Column(db.Text, nullable=True)
     ip_address = db.Column(db.String(50))
+    is_revoked = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     admin = db.relationship('User', foreign_keys=[admin_id])
 
