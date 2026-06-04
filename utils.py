@@ -435,7 +435,7 @@ class AITutor:
                 query_vec = self.vectorizer.transform([context_query])
                 similarities = cosine_similarity(query_vec, self.tfidf_matrix).flatten()
                 best_idx = np.argmax(similarities)
-                if similarities[best_idx] > 0.15:
+                if similarities[best_idx] > 0.35:
                     context = self.answers[best_idx]
             except Exception:
                 pass
@@ -482,13 +482,10 @@ class AITutor:
                     return completion.choices[0].message.content
 
                 else:
-                    # Use Gemini API — Fast: flash-lite, Think: flash (deeper reasoning)
-                    import google.generativeai as genai
-                    genai.configure(api_key=api_key)
-                    gemini_model = 'gemini-1.5-pro' if model_type == "think" else 'gemini-1.5-flash'
-                    model = genai.GenerativeModel(gemini_model)
-                    response = model.generate_content(full_prompt)
-                    if response.text:
+                    # Use Gemini API with robust model fallback
+                    from gemini_helper import generate_gemini_content
+                    response = generate_gemini_content(api_key, full_prompt, model_type=model_type)
+                    if response and response.text:
                         return response.text
 
             except Exception as e:
@@ -501,11 +498,24 @@ class AITutor:
         if context:
             return context
 
-        # Static KB direct match
+        # Static KB direct match — require at least 2 meaningful keyword overlaps
         query_lower = query.lower()
+        filler_words = {"what", "how", "explain", "describe", "define", "does", "which", "when", "where", "between", "difference", "list", "give", "tell", "about"}
+        query_words = set(query_lower.split())
+        best_match = None
+        best_score = 0
         for item in self.static_kb:
-            if any(word in query_lower for word in item['q'].lower().split() if len(word) > 3):
-                return item['a']
+            kb_words = {w for w in item['q'].lower().split() if len(w) > 3 and w not in filler_words}
+            overlap = kb_words & query_words
+            if len(overlap) >= 2 and len(overlap) > best_score:
+                best_score = len(overlap)
+                best_match = item['a']
+            elif len(overlap) == 1 and len(kb_words) <= 2 and len(overlap) > best_score:
+                # Allow single-word match only if the KB question is very short (e.g. "What is SQL?")
+                best_score = len(overlap)
+                best_match = item['a']
+        if best_match:
+            return best_match
 
         if getattr(AITutor, '_api_dead', False):
             return "My Gemini API quota has been exhausted. I am currently in local fallback mode and can only answer questions directly related to your notes or basic pre-programmed concepts (like Stack, Queue, API, Machine Learning)."

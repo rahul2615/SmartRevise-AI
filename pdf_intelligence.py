@@ -123,15 +123,13 @@ class TextRankSummarizer:
         # --- ADVANCED: Gemini abstractive summary ---
         if api_key:
             try:
-                import google.generativeai as genai
-                genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                from gemini_helper import generate_gemini_content
                 prompt = (
                     "Summarize the following text into clear, high-impact bullet points for a student.\n"
                     f"Text:\n{text[:30000]}\n\n"
                     f"Provide exactly {max_points} bullet points. Focus on key takeaways."
                 )
-                response = model.generate_content(prompt)
+                response = generate_gemini_content(api_key, prompt, model_type="fast")
                 points = [p.strip().lstrip('*-• ') for p in response.text.split('\n') if p.strip()]
                 if points:
                     return points[:max_points]
@@ -298,16 +296,14 @@ class ShortNotesGenerator:
         # --- ADVANCED: Gemini structured notes ---
         if api_key:
             try:
-                import google.generativeai as genai
+                from gemini_helper import generate_gemini_content
                 import json
-                genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-1.5-flash')
                 prompt = (
                     "Analyze the following text and generate structured study notes in JSON format.\n"
                     "JSON Schema: {\"definitions\": [], \"key_concepts\": [], \"important_facts\": [], \"important_terms\": [], \"summary\": \"\"}\n\n"
                     f"Text:\n{text[:20000]}"
                 )
-                response = model.generate_content(prompt)
+                response = generate_gemini_content(api_key, prompt, model_type="fast")
                 # Extract JSON from response (handling potential markdown formatting)
                 raw = response.text
                 if "```json" in raw:
@@ -447,17 +443,15 @@ class PDFMCQGenerator:
         # --- ADVANCED: Gemini high-accuracy MCQs ---
         if api_key:
             try:
-                import google.generativeai as genai
+                from gemini_helper import generate_gemini_content
                 import json
-                genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-1.5-flash')
                 prompt = (
                     f"Generate {num_questions} high-quality Multiple Choice Questions at '{difficulty}' difficulty level based on the text below.\n"
                     "For each question, provide 1 correct answer and 3 highly plausible but incorrect distractors.\n"
                     "JSON Format: [{\"question\": \"\", \"options\": [\"\", \"\", \"\", \"\"], \"answer\": \"\", \"explanation\": \"\", \"topic\": \"\", \"subtopic\": \"\", \"hint\": \"\"}]\n\n"
                     f"Text:\n{text[:20000]}"
                 )
-                response = model.generate_content(prompt)
+                response = generate_gemini_content(api_key, prompt, model_type="fast")
                 raw = response.text
                 if "```json" in raw:
                     raw = raw.split("```json")[1].split("```")[0].strip()
@@ -677,15 +671,13 @@ class PDFQuestionAnswerer:
         context = self._retrieve(question)
         if api_key:
             try:
-                import google.generativeai as genai
-                genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                from gemini_helper import generate_gemini_content
                 prompt = (
                     "You are an expert document analyst. Answer ONLY from the context below.\n\n"
                     f"Context:\n{context}\n\nQuestion: {question}\n\n"
                     "Be concise, accurate, and use bullet points when helpful."
                 )
-                return model.generate_content(prompt).text
+                return generate_gemini_content(api_key, prompt, model_type="fast").text
             except Exception as e:
                 print(f"[PDF-QA] Gemini error: {e}")
         return f"Based on the PDF:\n\n{context}"

@@ -1170,11 +1170,9 @@ def planner_action():
                     )
                     suggestion = completion.choices[0].message.content.strip().replace('"', '')
                 else:
-                    import google.generativeai as genai
-                    genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-1.5-flash')
-                    response = model.generate_content(prompt)
-                    if response.text:
+                    from gemini_helper import generate_gemini_content
+                    response = generate_gemini_content(api_key, prompt, model_type="fast")
+                    if response and response.text:
                         suggestion = response.text.strip().replace('"', '')
             except Exception as e:
                 print("API Error for suggestions:", e)
