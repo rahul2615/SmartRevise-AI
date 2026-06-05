@@ -74,7 +74,7 @@ csrf = CSRFProtect(app)     # CSRF protection on all forms
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'warning'
-login_manager.session_protection = 'basic'  # 'basic' is safer behind reverse proxies (Render, etc.)
+login_manager.session_protection = None  # Disabled because built-in uses IP which fails behind proxies. We use custom fingerprint instead.
 socketio = SocketIO(app, cors_allowed_origins='*', async_mode='threading')
 
 # Rate Limiter — prevent API abuse
