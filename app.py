@@ -74,7 +74,7 @@ csrf = CSRFProtect(app)     # CSRF protection on all forms
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 login_manager.login_message_category = 'warning'
-login_manager.session_protection = 'strong'  # Flask-Login built-in session protection
+login_manager.session_protection = 'basic'  # 'basic' is safer behind reverse proxies (Render, etc.)
 socketio = SocketIO(app, cors_allowed_origins='*', async_mode='threading')
 
 # Rate Limiter — prevent API abuse
@@ -89,11 +89,14 @@ limiter = Limiter(
 # Security Helper Functions
 # ==========================================
 def _generate_session_fingerprint():
-    """Generate a fingerprint from the user's browser User-Agent + IP."""
+    """Generate a fingerprint from the user's browser User-Agent.
+    
+    Note: IP is intentionally excluded because reverse proxies (Render,
+    Cloudflare, etc.) can report different IPs across consecutive requests,
+    which would cause false-positive session invalidations.
+    """
     ua = request.headers.get('User-Agent', '')
-    ip = request.remote_addr or ''
-    raw = f"{ua}|{ip}"
-    return hashlib.sha256(raw.encode()).hexdigest()
+    return hashlib.sha256(ua.encode()).hexdigest()
 
 def _log_admin_action(action, target_user_id=None, details=None):
     """Record an admin action in the audit log."""
