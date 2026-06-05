@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, abort, session
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, abort, session, make_response
 from models import db, User, RevisionNote, MCQScore, StudyPlan, CodeSubmission, StudyRoadmap, PDFDocument, StudyGroup, GroupMember, GroupMessage, ChatConversation, ChatMessage, AdminAuditLog
 import requests
 import json
@@ -238,7 +238,16 @@ def login():
 
             flash('Login Successful!', 'success')
             next_page = request.args.get('next')
-            return redirect(next_page or url_for('dashboard'))
+            dest = next_page or url_for('dashboard')
+            # Use a 200 HTML response instead of 302 redirect.
+            # Render's proxy strips Set-Cookie from 302 responses,
+            # so we return a page that lets the browser store cookies
+            # first, then redirect via meta-refresh.
+            html = f'''<!DOCTYPE html>
+<html><head><meta http-equiv="refresh" content="0;url={dest}"></head>
+<body><p>Redirecting...</p>
+<script>window.location.replace("{dest}");</script></body></html>'''
+            return make_response(html, 200)
         else:
             # Track failed login attempts
             if user:
