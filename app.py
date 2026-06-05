@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, abort, session, make_response
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, abort, session
 from models import db, User, RevisionNote, MCQScore, StudyPlan, CodeSubmission, StudyRoadmap, PDFDocument, StudyGroup, GroupMember, GroupMessage, ChatConversation, ChatMessage, AdminAuditLog
 import requests
 import json
@@ -209,6 +209,11 @@ def login():
             flash('This account has been deactivated by an administrator.', 'danger')
             return render_template('login.html')
 
+        # Older databases added is_active as a nullable column. Flask-Login
+        # rejects NULL as inactive, so repair legacy accounts before login.
+        if user and user.is_active is None:
+            user.is_active = True
+
         # Check account lockout
         if user and user.is_locked:
             remaining = int((user.locked_until - datetime.utcnow()).total_seconds() / 60) + 1
@@ -227,10 +232,11 @@ def login():
             user.session_token = new_token
             db.session.commit()
 
-            # Always set remember=True so Flask-Login creates a persistent cookie.
-            # Render's proxy drops the session cookie on redirects; the remember
-            # cookie survives (this is why Google OAuth already works).
-            login_user(user, remember=True)
+            if not login_user(user, remember=remember):
+                db.session.rollback()
+                flash('Login failed because this account is inactive.', 'danger')
+                return render_template('login.html')
+
             session.permanent = True
             session['session_token'] = new_token
             session['session_fingerprint'] = _generate_session_fingerprint()
@@ -238,16 +244,7 @@ def login():
 
             flash('Login Successful!', 'success')
             next_page = request.args.get('next')
-            dest = next_page or url_for('dashboard')
-            # Use a 200 HTML response instead of 302 redirect.
-            # Render's proxy strips Set-Cookie from 302 responses,
-            # so we return a page that lets the browser store cookies
-            # first, then redirect via meta-refresh.
-            html = f'''<!DOCTYPE html>
-<html><head><meta http-equiv="refresh" content="0;url={dest}"></head>
-<body><p>Redirecting...</p>
-<script>window.location.replace("{dest}");</script></body></html>'''
-            return make_response(html, 200)
+            return redirect(next_page or url_for('dashboard'))
         else:
             # Track failed login attempts
             if user:
@@ -324,6 +321,9 @@ def authorize_google():
         if user and user.is_active is False:
             flash('This account has been deactivated by an administrator.', 'danger')
             return redirect(url_for('login'))
+
+        if user and user.is_active is None:
+            user.is_active = True
         
         if not user:
             # Auto-register Google users
@@ -352,7 +352,10 @@ def authorize_google():
         user.session_token = new_token
         db.session.commit()
         
-        login_user(user, remember=True)
+        if not login_user(user, remember=True):
+            db.session.rollback()
+            flash('Google Login Failed: this account is inactive.', 'danger')
+            return redirect(url_for('login'))
         session.permanent = True
         session['session_token'] = new_token
         session['session_fingerprint'] = _generate_session_fingerprint()
