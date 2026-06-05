@@ -141,8 +141,20 @@ def enforce_session_security():
     if request.endpoint == 'static' or not current_user.is_authenticated:
         return
 
-    # 1. Single-Session Enforcement — check token matches DB
+    # 0. Session Recovery — if user was restored from remember-me cookie
+    #    but the session data was lost (common behind reverse proxies),
+    #    re-populate the session from the database instead of logging out.
     session_token = session.get('session_token')
+    if not session_token and current_user.session_token:
+        # User is authenticated (via remember cookie) but session is empty.
+        # Restore session data from DB.
+        session['session_token'] = current_user.session_token
+        session['session_fingerprint'] = _generate_session_fingerprint()
+        session['last_activity'] = datetime.utcnow().isoformat()
+        session.permanent = True
+        return
+
+    # 1. Single-Session Enforcement — check token matches DB
     if not session_token or session_token != current_user.session_token:
         logout_user()
         session.clear()
@@ -215,7 +227,10 @@ def login():
             user.session_token = new_token
             db.session.commit()
 
-            login_user(user, remember=remember)
+            # Always set remember=True so Flask-Login creates a persistent cookie.
+            # Render's proxy drops the session cookie on redirects; the remember
+            # cookie survives (this is why Google OAuth already works).
+            login_user(user, remember=True)
             session.permanent = True
             session['session_token'] = new_token
             session['session_fingerprint'] = _generate_session_fingerprint()
