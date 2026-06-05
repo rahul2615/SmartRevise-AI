@@ -18,12 +18,14 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from authlib.integrations.flask_client import OAuth
 from werkzeug.utils import secure_filename
+from werkzeug.middleware.proxy_fix import ProxyFix
 import re
 
 from dotenv import load_dotenv
 load_dotenv()  # Load environment variables from .env file if it exists
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # ==========================================
 # OAuth Setup
@@ -272,6 +274,8 @@ def register():
 @app.route('/login/google')
 def login_google():
     redirect_uri = url_for('authorize_google', _external=True)
+    if redirect_uri.startswith('http://') and not ('localhost' in request.host or '127.0.0.1' in request.host):
+        redirect_uri = redirect_uri.replace('http://', 'https://', 1)
     return oauth.google.authorize_redirect(redirect_uri)
 
 @app.route('/login/google/authorize')
